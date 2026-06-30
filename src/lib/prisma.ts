@@ -5,7 +5,7 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-function createPrismaClient(): PrismaClient {
+function buildConnectionUrl(): string {
   let url = process.env.DATABASE_URL!;
 
   // mariadb driver requires "mariadb://" protocol, not "mysql://"
@@ -13,11 +13,39 @@ function createPrismaClient(): PrismaClient {
     url = url.replace("mysql://", "mariadb://");
   }
 
+  // Parse existing params
+  const hasParams = url.includes("?");
+  const params = new URLSearchParams();
+
+  // Serverless-friendly settings
+  params.set("connectTimeout", "30000");
+  params.set("socketTimeout", "30000");
+  params.set("connectionLimit", "1");
+  params.set("idleTimeout", "10000");
+
   // TiDB Cloud needs SSL
-  if (url.includes("tidbcloud.com") && !url.includes("ssl")) {
-    url += url.includes("?") ? "&ssl=true" : "?ssl=true";
+  if (url.includes("tidbcloud.com")) {
+    params.set("ssl", "true");
   }
 
+  if (hasParams) {
+    // Append our params to existing ones
+    const [base, existingParams] = url.split("?");
+    const existing = new URLSearchParams(existingParams);
+    // Don't override existing values
+    for (const [key, value] of params) {
+      if (!existing.has(key)) {
+        existing.set(key, value);
+      }
+    }
+    return `${base}?${existing.toString()}`;
+  }
+
+  return `${url}?${params.toString()}`;
+}
+
+function createPrismaClient(): PrismaClient {
+  const url = buildConnectionUrl();
   const adapter = new PrismaMariaDb(url);
   return new PrismaClient({ adapter }) as unknown as PrismaClient;
 }
