@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("Register error:", error);
-    return errorResponse("Terjadi kesalahan saat registrasi", 500);
+    const message = error instanceof Error ? error.message : "Terjadi kesalahan saat registrasi";
+    return errorResponse(message, 500);
   }
 }

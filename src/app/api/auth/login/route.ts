@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("Login error:", error);
-    return errorResponse("Terjadi kesalahan saat login", 500);
+    const message = error instanceof Error ? error.message : "Terjadi kesalahan saat login";
+    return errorResponse(message, 500);
   }
 }
