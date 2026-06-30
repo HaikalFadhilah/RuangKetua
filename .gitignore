@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# prisma generated
+/src/generated/prisma
+
+# whatsapp auth session
+.whatsapp-auth/
+
+# uploads (user files)
+/public/uploads/*
+!/public/uploads/.gitkeep

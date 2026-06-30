@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="56" fill="url(#grad)" />
+  <!-- Shield shape -->
+  <path d="M60 18C60 18 30 28 30 48V72C30 88 60 104 60 104C60 104 90 88 90 72V48C90 28 60 18 60 18Z" fill="white" fill-opacity="0.15" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Letters RK -->
+  <text x="60" y="70" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="32" fill="white" letter-spacing="-1">RK</text>
+  <!-- Small crown on top -->
+  <path d="M48 30L52 24L56 28L60 20L64 28L68 24L72 30" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="120" y2="120">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+</svg>
