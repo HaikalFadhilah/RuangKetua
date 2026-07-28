@@ -2,9 +2,12 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "dev-secret-key-change-in-production-min-32-chars!!"
-);
+// [FIX Diterapkan]: Memaksa pengambilan key agar konsisten antara Edge Config & Node Config
+const rawSecret = process.env.JWT_SECRET && process.env.JWT_SECRET.length > 0 
+  ? process.env.JWT_SECRET 
+  : "dev-secret-key-change-in-production-min-32-chars!!";
+
+const JWT_SECRET = new TextEncoder().encode(rawSecret);
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
@@ -27,14 +30,15 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     return payload as unknown as JWTPayload;
-  } catch {
+  } catch (error) {
+    console.error(`[Auth] Gagal verifikasi token:`, error);
     return null;
   }
 }
 
 export async function getTokenFromCookies(): Promise<string | null> {
   const cookieStore = await cookies();
-  return cookieStore.get("token")?.value || null;
+  return cookieStore.get("admin_token")?.value || cookieStore.get("token")?.value || null;
 }
 
 export async function getTokenFromRequest(req: NextRequest): Promise<string | null> {
@@ -45,7 +49,7 @@ export async function getTokenFromRequest(req: NextRequest): Promise<string | nu
   }
 
   // Then check cookies
-  return req.cookies.get("token")?.value || null;
+  return req.cookies.get("admin_token")?.value || req.cookies.get("token")?.value || null;
 }
 
 export async function getCurrentUser(): Promise<JWTPayload | null> {

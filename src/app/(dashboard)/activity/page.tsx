@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/lib/i18n";
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
@@ -10,8 +11,7 @@ import { Activity as ActivityIcon, Plus, Edit3, Trash2, Radio, Bell, MessageSqua
 import { formatRelativeTime } from "@/lib/utils";
 import type { ActivityLogEntry } from "@/types";
 
-const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.03 } } };
-const item = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } };
+import { container, item } from "@/lib/animations";
 
 const actionIcons: Record<string, React.ReactNode> = {
   CREATE: <Plus className="h-3.5 w-3.5" />,
@@ -34,6 +34,7 @@ const actionColors: Record<string, string> = {
 };
 
 export default function ActivityPage() {
+  const { t } = useI18n();
   const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -42,7 +43,7 @@ export default function ActivityPage() {
       const res = await fetch("/api/activity?limit=50");
       const data = await res.json();
       if (data.success) setActivities(data.data);
-    } catch { toast.error("Gagal mengambil activity log"); }
+    }     catch { toast.error(t("activity.fetchError")); }
     finally { setIsLoading(false); }
   }, []);
 
@@ -51,8 +52,8 @@ export default function ActivityPage() {
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
       <motion.div variants={item}>
-        <h1 className="text-2xl font-bold tracking-tight">Activity Log</h1>
-        <p className="text-muted-foreground text-sm mt-1">Riwayat semua aktivitas</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("nav.activity")}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{t("activity.subtitle")}</p>
       </motion.div>
 
       {isLoading ? (
@@ -60,7 +61,7 @@ export default function ActivityPage() {
       ) : activities.length === 0 ? (
         <Card><CardContent className="flex flex-col items-center justify-center py-16">
           <ActivityIcon className="h-12 w-12 text-muted-foreground/30 mb-3" />
-          <p className="text-lg font-medium">Belum ada aktivitas</p>
+          <p className="text-lg font-medium">{t("activity.empty")}</p>
         </CardContent></Card>
       ) : (
         <div className="relative">

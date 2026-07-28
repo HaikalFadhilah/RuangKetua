@@ -5,3 +5,4 @@ export function getUserIdFromRequest(request: NextRequest): string {
   if (!userId) throw new Error("Unauthorized");
   return userId;
 }
+

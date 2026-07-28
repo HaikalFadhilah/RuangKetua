@@ -19,6 +19,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     set({ user: null, isLoading: false });
     document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     window.location.href = "/login";
   },
 }));

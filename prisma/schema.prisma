@@ -12,16 +12,23 @@ datasource db {
 // ==========================================
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  avatar    String?
-  role      String   @default("ketua_kelas")
-  className String?  @map("class_name")
-  semester  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  password   String
+  avatar     String?
+  role       String   @default("ketua_kelas")
+  className  String?  @map("class_name")
+  semester   String?
+  university String?  // <--- TAMBAHAN NAMA KAMPUS/UNIVERSITAS
+  isSuspended Boolean @default(false)
+  
+  // ── SUBSCRIPTION / PAYWALL ──
+  subscriptionPlan String? @default("trial") // "trial", "monthly", "halfyear", "yearly"
+  subscriptionEnd  DateTime? 
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   tasks         Task[]
   announcements Announcement[]
@@ -30,10 +37,90 @@ model User {
   files         SharedFile[]
   reminders     Reminder[]
   settings      UserSettings?
+  courses       Course[]
+  calendarEvents CalendarEvent[]
+  whatsappSession WhatsAppSession?
+  helpTickets   HelpTicket[]
+  ticketReplies TicketReply[]
+
+  // Relasi Interaksi Forum & Chat
+  forumPosts    ForumPost[]
+  forumComments ForumComment[]
+  chatMessages  ChatMessage[]
+
+  voucherRedemptions VoucherRedemption[]
+
+  cloudAccounts CloudAccount[]
+  cloudFiles    CloudFile[]
+  classMembers  ClassMember[]
 
   @@map("users")
 }
 
+// ==========================================
+// CHAT GLOBALS
+// ==========================================
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  userId     String
+  content    String   @db.Text
+  category   ForumCategory @default(PUBLIC) // Re-use ForumCategory enum (PUBLIC or INTERNAL_CAMPUS)
+  university String?  // Nama universitas jika INTERNAL_CAMPUS
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([category])
+  @@index([university])
+  @@index([createdAt])
+  @@map("chat_messages")
+}
+
+// ==========================================
+// FORUM KETUA KELAS
+// ==========================================
+
+model ForumPost {
+  id         String   @id @default(cuid())
+  userId     String
+  title      String
+  content    String   @db.Text
+  category   ForumCategory @default(PUBLIC) // Bisa PUBLIC atau INTERNAL_CAMPUS
+  university String?  // Diisi nama universitas jika kategorinya internal_campus
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments   ForumComment[]
+
+  @@index([category])
+  @@index([university])
+  @@map("forum_posts")
+}
+
+model ForumComment {
+  id         String   @id @default(cuid())
+  postId     String
+  userId     String
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  post       ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("forum_comments")
+}
+
+enum ForumCategory {
+  PUBLIC
+  INTERNAL_CAMPUS
+}
+
+// ==========================================
+// USER SETTINGS
+// ==========================================
 model UserSettings {
   id                String  @id @default(cuid())
   userId            String  @unique
@@ -42,6 +129,13 @@ model UserSettings {
   aiModel           String  @default("llama-3.3-70b-versatile")
   whatsappConnected Boolean @default(false)
   language          String  @default("id")
+
+  // Google Drive allocation
+  allocationStrategy String  @default("round_robin")
+  allocationOrder    String? // JSON array of CloudAccount ids (custom order)
+  driveUploadMode     String  @default("manual") // "manual" | "auto"
+  allocationRrCursor  Int     @default(0)
+  allocationSwrrState String? // JSON state for weighted round robin
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -56,7 +150,6 @@ model Task {
   id          String     @id @default(cuid())
   userId      String
   courseId     String?
-  dosenId     String?
   title       String
   description String?    @db.Text
   deadline    DateTime?
@@ -68,7 +161,6 @@ model Task {
 
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   course   Course?       @relation(fields: [courseId], references: [id])
-  dosen    Dosen?        @relation(fields: [dosenId], references: [id])
   subtasks Subtask[]
   history  TaskHistory[]
 
@@ -117,37 +209,52 @@ enum TaskStatus {
 }
 
 // ==========================================
+// CLASS MEMBERS (BUKU INDUK)
+// ==========================================
+
+model ClassMember {
+  id        String   @id @default(cuid())
+  userId    String   // Pemilik/Ketua Kelas
+  nim       String?  // NIM / Nomor Mahasiswa (opsional)
+  name      String
+  phone     String?  // Untuk WA Broadcast
+  email     String?
+  gender    String?  // Laki-laki / Perempuan (opsional)
+  status    String   @default("ACTIVE") // ACTIVE, INACTIVE
+  memberType String  @default("REGULER") // REGULER, REVISIAN
+  revisiCourses String? @db.Text // Jika REVISIAN, ini matkul yang direvisi (comma separated)
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("class_members")
+}
+
+// ==========================================
 // COURSE & DOSEN
 // ==========================================
 
 model Course {
   id        String   @id @default(cuid())
+  userId    String
   name      String
-  code      String?  @unique
+  sks       Int?
   semester  String?
   schedule  String?  @db.Text
+  dosenName String?
+  dosenWa   String?
   createdAt DateTime @default(now())
 
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   tasks      Task[]
-  dosen      Dosen[]     @relation("CourseDosen")
   elearnings ELearning[]
   materials  Material[]
 
+  @@index([userId])
   @@map("courses")
-}
-
-model Dosen {
-  id           String  @id @default(cuid())
-  name         String
-  whatsapp     String?
-  email        String?
-  consultHours String?
-  photoUrl     String?
-
-  courses Course[] @relation("CourseDosen")
-  tasks   Task[]
-
-  @@map("dosen")
 }
 
 // ==========================================
@@ -272,6 +379,7 @@ model SharedFile {
 model StickyNote {
   id        String   @id @default(cuid())
   userId    String
+  title     String   @default("")
   content   String   @db.Text
   color     String   @default("yellow")
   pinned    Boolean  @default(false)
@@ -310,6 +418,7 @@ model ActivityLog {
 
 model CalendarEvent {
   id          String       @id @default(cuid())
+  userId      String
   title       String
   description String?      @db.Text
   startDate   DateTime
@@ -319,6 +428,9 @@ model CalendarEvent {
   allDay      Boolean      @default(false)
   createdAt   DateTime     @default(now())
 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
   @@index([startDate])
   @@map("calendar_events")
 }
@@ -337,16 +449,246 @@ enum CalendarType {
 }
 
 // ==========================================
+// SYSTEM SETTINGS
+// ==========================================
+
+model SystemSettings {
+  id               String   @id @default(cuid())
+  maintenanceMode  Boolean  @default(false)
+  maintenanceMsg   String?  @db.Text
+  maxFileUploadMb  Int      @default(10)
+  groqApiKey       String?
+  appName          String   @default("Ruang Ketua")
+  adminWhatsapp    String?  // Nomor WhatsApp admin (format kode negara + nomor, tanpa +) untuk bantuan pengguna
+
+  // ── PRICING ──────────────────────────────
+  priceMonthly     Int      @default(29000)
+  priceHalfYear    Int      @default(149000)
+  priceYearly      Int      @default(269000)
+  pricingEnabled   Boolean  @default(true)
+
+  // ── PAKASIR PAYMENT GATEWAY ───────────────
+  pakasirApiKey    String?
+  pakasirSlug      String?   // Project slug dari Pakasir dashboard
+  pakasirSandbox   Boolean  @default(true)
+  pakasirEnabled   Boolean  @default(false)
+
+  // ── GOOGLE DRIVE / CLOUD STORAGE ──────────
+  googleClientId     String?  // OAuth Client ID dari Google Cloud Console
+  googleClientSecret String?  // OAuth Client Secret
+  driveTokenSecret   String?  // Kunci enkripsi token (AES-256). Bisa di-generate otomatis jika kosong.
+
+  updatedAt        DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+// ==========================================
+// UNIVERSITY MASTER DATA
+// ==========================================
+
+model University {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  shortName String?
+  city      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("universities")
+}
+
+// ==========================================
+// CLOUD STORAGE ACCOUNTS (Google Drive, dll)
+// ==========================================
+
+model CloudAccount {
+  id                  String   @id @default(cuid())
+  userId              String
+  provider            String   @default("google_drive") // google_drive, onedrive, dropbox, dll
+  email               String?  // email akun cloud (mis. akun Google)
+  encryptedCredentials String  @db.Text // blob JSON terenkripsi (clientId, clientSecret, redirectUri, accessToken, refreshToken, expiryDate, scope, tokenType)
+  quotaTotal          String?  // dalam byte (string untuk hindari overflow)
+  quotaUsed           String?
+  status              String   @default("active") // active, error, invalid_token
+  lastSyncedAt        DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files CloudFile[]
+
+  @@index([userId])
+  @@map("cloud_accounts")
+}
+
+// ==========================================
+// CLOUD FILE METADATA MIRROR (Google Drive)
+// ==========================================
+
+model CloudFile {
+  id                String    @id @default(cuid())
+  userId            String
+  accountId         String
+  remoteFileId      String // id file di Google Drive
+  name              String   @db.Text
+  mimeType          String
+  size              Int       @default(0)
+  isFolder          Boolean   @default(false)
+  isStarred         Boolean   @default(false)
+  isShared          Boolean   @default(false)
+  shareToken        String?   @unique
+  parentId          String?   // remote parent folder id (null = root)
+  virtualPath       String    @db.Text  // bisa panjang untuk folder bersarang
+  thumbnailLink     String?  @db.Text
+  webViewLink       String?  @db.Text
+  remoteCreatedTime  DateTime?
+  remoteModifiedTime DateTime?
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account CloudAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([remoteFileId])
+  @@index([parentId])
+  @@index([isStarred])
+  @@map("cloud_files")
+}
+
+// ==========================================
+// HELP TICKETS
+// ==========================================
+
+model HelpTicket {
+  id          String       @id @default(cuid())
+  userId      String
+  subject     String
+  message     String       @db.Text
+  category    TicketCategory @default(BUG)
+  status      TicketStatus @default(OPEN)
+  priority    TicketPriority @default(MEDIUM)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replies TicketReply[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("help_tickets")
+}
+
+model TicketReply {
+  id        String   @id @default(cuid())
+  ticketId  String
+  userId    String
+  message   String   @db.Text
+  isAdmin   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  ticket HelpTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ticket_replies")
+}
+
+enum TicketCategory {
+  BUG
+  FEATURE
+  QUESTION
+  OTHER
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// ==========================================
+// VOUCHER / PROMO CODES
+// ==========================================
+
+model Voucher {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  description   String?
+  discountType  String    @default("percent") // "percent" | "fixed"
+  discountValue Int       // persen (0-100) atau nominal rupiah
+  maxUses       Int?      // null = unlimited
+  usedCount     Int       @default(0)
+  validFrom     DateTime  @default(now())
+  validUntil    DateTime?
+  isActive      Boolean   @default(true)
+  applicablePlan String?  // null = semua plan, atau "monthly"|"halfyear"|"yearly"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  redemptions VoucherRedemption[]
+
+  @@map("vouchers")
+}
+
+model VoucherRedemption {
+  id        String   @id @default(cuid())
+  voucher   Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  voucherId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@unique([voucherId, userId])
+  @@map("voucher_redemptions")
+}
+
+// ==========================================
+// BLOG POSTS
+// ==========================================
+model BlogPost {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String?  @db.Text
+  content     String   @db.Text // Markdown
+  category    String   @default("Umum")
+  coverEmoji  String?  // Emoji atau short label untuk kartu
+  status      String   @default("draft") // "draft" | "published"
+  readingTime String?  // mis. "4 menit baca"
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([publishedAt])
+  @@map("blog_posts")
+}
+
+// ==========================================
 // WHATSAPP SESSION
 // ==========================================
 
 model WhatsAppSession {
   id          String   @id @default(cuid())
+  userId      String   @unique
   sessionData String?  @db.LongText
   status      String   @default("disconnected")
   groupId     String?
   groupName   String?
   updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("whatsapp_sessions")
 }

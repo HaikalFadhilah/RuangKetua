@@ -13,6 +13,7 @@ export interface RegisterRequest {
   password: string;
   className?: string;
   semester?: string;
+  university?: string;
 }
 
 export interface AuthUser {
@@ -23,6 +24,74 @@ export interface AuthUser {
   className?: string | null;
   semester?: string | null;
   avatar?: string | null;
+  university?: string | null;
+}
+
+// ==========================================
+// FORUM TYPES
+// ==========================================
+
+export type ForumCategory = "PUBLIC" | "INTERNAL_CAMPUS";
+
+export interface ForumPost {
+  id: string;
+  userId: string;
+  title: string;
+  content: string;
+  category: ForumCategory;
+  university: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    name: string;
+    avatar: string | null;
+    className: string | null;
+    university: string | null;
+  };
+  _count: {
+    comments: number;
+  };
+}
+
+export interface ForumComment {
+  id: string;
+  postId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    name: string;
+    avatar: string | null;
+    className: string | null;
+    university: string | null;
+  };
+}
+
+export interface ForumPostDetail extends ForumPost {
+  comments: ForumComment[];
+}
+
+// ==========================================
+// CHAT TYPES
+// ==========================================
+
+export interface ChatMessage {
+  id: string;
+  userId: string;
+  content: string;
+  category: ForumCategory; // "PUBLIC" | "INTERNAL_CAMPUS"
+  university: string | null;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    avatar: string | null;
+    className: string | null;
+    university: string | null;
+  };
 }
 
 // ==========================================
@@ -36,7 +105,6 @@ export interface TaskForm {
   title: string;
   description?: string;
   courseId?: string;
-  dosenId?: string;
   deadline?: string;
   priority: Priority;
   status: TaskStatus;
@@ -53,32 +121,29 @@ export interface TaskWithRelations {
   attachments: string | null;
   createdAt: string;
   updatedAt: string;
-  course: { id: string; name: string; code: string | null } | null;
-  dosen: { id: string; name: string } | null;
+  course: { id: string; name: string } | null;
   subtasks: { id: string; title: string; completed: boolean }[];
   _count?: { subtasks: number };
 }
 
 // ==========================================
-// DOSEN TYPES
+// COURSE TYPES
 // ==========================================
 
-export interface DosenForm {
-  name: string;
-  whatsapp?: string;
-  email?: string;
-  consultHours?: string;
-  courseIds?: string[];
-}
-
-export interface DosenWithCourses {
+export interface CourseWithRelations {
   id: string;
   name: string;
-  whatsapp: string | null;
-  email: string | null;
-  consultHours: string | null;
-  photoUrl: string | null;
-  courses: { id: string; name: string; code: string | null }[];
+  sks: number | null;
+  semester: string | null;
+  schedule: string | null;
+  dosenName: string | null;
+  dosenWa: string | null;
+  createdAt: string;
+  _count?: {
+    tasks: number;
+    elearnings: number;
+    materials: number;
+  };
 }
 
 // ==========================================

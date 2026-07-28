@@ -25,6 +25,7 @@ import {
   Image,
 } from "lucide-react";
 import { formatDate, formatFileSize } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 interface Course {
   id: string;
@@ -42,8 +43,7 @@ interface RepoFile {
   createdAt: string;
 }
 
-const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04 } } };
-const item = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } };
+import { container, item } from "@/lib/animations";
 
 function getFileIcon(type: string) {
   if (type.includes("pdf")) return <FileText className="h-5 w-5 text-red-400" />;
@@ -63,6 +63,7 @@ export default function RepositoryPage() {
   const [search, setSearch] = useState("");
   const [fileCounts, setFileCounts] = useState<Record<string, number>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useI18n();
 
   // Fetch courses (as folders)
   const fetchCourses = useCallback(async () => {
@@ -130,7 +131,7 @@ export default function RepositoryPage() {
     try {
       for (let i = 0; i < fileList.length; i++) {
         const f = fileList[i];
-        if (f.size > 10 * 1024 * 1024) { toast.error(`${f.name} melebihi 10MB`); continue; }
+        if (f.size > 10 * 1024 * 1024) { toast.error(t("repo.fileTooLarge", { name: f.name })); continue; }
         const formData = new FormData();
         formData.append("file", f);
         if (selectedCourse) formData.append("courseId", selectedCourse.id);
@@ -138,20 +139,20 @@ export default function RepositoryPage() {
         const data = await res.json();
         if (!data.success) throw new Error(data.error);
       }
-      toast.success("Materi berhasil diupload");
+      toast.success(t("repo.uploadSuccess"));
       fetchFiles(selectedCourse?.id);
       fetchFileCounts();
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Gagal upload"); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : t("repo.uploadError")); }
     finally { setIsUploading(false); if (fileInputRef.current) fileInputRef.current.value = ""; }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await fetch(`/api/files/${id}`, { method: "DELETE" });
-      toast.success("File dihapus");
+      toast.success(t("repo.fileDeleted"));
       fetchFiles(selectedCourse?.id);
       fetchFileCounts();
-    } catch { toast.error("Gagal menghapus"); }
+    } catch { toast.error(t("repo.deleteError")); }
   };
 
   const filteredFiles = files.filter((f) => f.name.toLowerCase().includes(search.toLowerCase()));
@@ -174,18 +175,14 @@ export default function RepositoryPage() {
           )}
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              {selectedCourse ? selectedCourse.name : "Repository Materi"}
+              {selectedCourse ? selectedCourse.name : t("repo.title")}
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
-              {selectedCourse ? `Materi untuk ${selectedCourse.code || selectedCourse.name}` : "Kelola materi kuliah berdasarkan mata kuliah"}
+              {selectedCourse ? t("repo.forCourse", { course: selectedCourse.code || selectedCourse.name }) : t("repo.subtitle")}
             </p>
           </div>
         </div>
-        <Button onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
-          {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-          {selectedCourse ? "Upload ke Folder" : "Upload Materi"}
-        </Button>
-        <input ref={fileInputRef} type="file" multiple className="hidden" accept=".pdf,.docx,.doc,.pptx,.ppt,.xlsx,.xls,.zip,.rar,.mp4,.webm,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv" onChange={(e) => handleUpload(e.target.files)} />
+
       </motion.div>
 
       {!selectedCourse ? (
@@ -204,7 +201,7 @@ export default function RepositoryPage() {
                       <div className="flex items-center gap-2">
                         {c.code && <p className="text-xs text-muted-foreground">{c.code}</p>}
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          {fileCounts[c.id] || 0} file
+                          {fileCounts[c.id] || 0} {t("repo.fileUnit")}
                         </Badge>
                       </div>
                     </div>
@@ -216,8 +213,8 @@ export default function RepositoryPage() {
               <Card className="col-span-full">
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <BookOpen className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                  <p className="text-sm font-medium">Belum ada mata kuliah</p>
-                  <p className="text-xs text-muted-foreground mt-1">Tambahkan dosen dengan mata kuliah di halaman Dosen</p>
+                  <p className="text-sm font-medium">{t("repo.noCourses")}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("repo.noCoursesDesc")}</p>
                 </CardContent>
               </Card>
             )}
@@ -229,29 +226,37 @@ export default function RepositoryPage() {
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  Semua File ({files.length})
+                  {t("repo.allFiles")} ({files.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="relative mb-4">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Cari file..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+                  <Input placeholder={t("repo.searchFilesPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
                 </div>
                 {filteredFiles.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8">
+                  <div className="flex flex-col items-center justify-center py-12">
                     <FolderOpen className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                    <p className="text-sm text-muted-foreground">{search ? "File tidak ditemukan" : "Belum ada file"}</p>
+                    <p className="text-sm font-medium">{search ? t("repo.notFound") : t("repo.noFiles")}</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {filteredFiles.slice(0, 20).map((f) => (
+                    {filteredFiles.slice(0, 20).map((f) => {
+                      const course = courses.find((c) => c.id === f.courseId);
+                      return (
                       <div key={f.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/50 group hover:border-primary/20 transition-all">
                         {getFileIcon(f.fileType)}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{f.name}</p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                             <span>{formatFileSize(f.fileSize)}</span>
                             <span>{formatDate(f.createdAt)}</span>
+                            {course && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-medium">
+                                <FolderOpen className="h-2.5 w-2.5 mr-1" />
+                                {course.code || course.name}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -263,7 +268,8 @@ export default function RepositoryPage() {
                           </Button>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -277,15 +283,15 @@ export default function RepositoryPage() {
             <CardContent className="p-6">
               <div className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Cari materi..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+                 <Input placeholder={t("repo.searchMateriPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
               </div>
               {filteredFiles.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <FolderOpen className="h-12 w-12 text-muted-foreground/30 mb-3" />
-                  <p className="text-lg font-medium">Folder kosong</p>
-                  <p className="text-sm text-muted-foreground mt-1">Upload materi untuk mata kuliah ini</p>
+                 <p className="text-lg font-medium">{t("repo.folderEmpty")}</p>
+                 <p className="text-sm text-muted-foreground mt-1">{t("repo.folderEmptyDesc")}</p>
                   <Button variant="outline" size="sm" className="mt-4" onClick={() => fileInputRef.current?.click()}>
-                    <Upload className="h-3.5 w-3.5" />Upload Materi
+                    <Upload className="h-3.5 w-3.5" />{t("repo.uploadMateri")}
                   </Button>
                 </div>
               ) : (
@@ -314,6 +320,14 @@ export default function RepositoryPage() {
               )}
             </CardContent>
           </Card>
+          <input 
+            ref={fileInputRef} 
+            type="file" 
+            multiple 
+            className="hidden" 
+            accept=".pdf,.docx,.doc,.pptx,.ppt,.xlsx,.xls,.zip,.rar,.mp4,.webm,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv" 
+            onChange={(e) => handleUpload(e.target.files)} 
+          />
         </motion.div>
       )}
     </motion.div>

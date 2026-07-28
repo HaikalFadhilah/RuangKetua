@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   ArrowLeft,
   Calendar,
@@ -55,14 +56,12 @@ interface TaskDetail {
   status: string;
   createdAt: string;
   updatedAt: string;
-  course: { id: string; name: string; code: string | null } | null;
-  dosen: { id: string; name: string } | null;
+  course: { id: string; name: string } | null;
   subtasks: Subtask[];
   history: TaskHistory[];
 }
 
-const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04 } } };
-const item = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } };
+import { container, item } from "@/lib/animations";
 
 export default function TaskDetailPage() {
   const params = useParams();
@@ -73,6 +72,8 @@ export default function TaskDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [newSubtask, setNewSubtask] = useState("");
   const [form, setForm] = useState({
     title: "",
@@ -175,12 +176,13 @@ export default function TaskDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Yakin ingin menghapus tugas ini?")) return;
+    setIsDeleting(true);
     try {
       await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
       toast.success("Tugas dihapus");
       router.push("/tasks");
     } catch { toast.error("Gagal menghapus"); }
+    finally { setIsDeleting(false); setDeleteOpen(false); }
   };
 
   if (isLoading) {
@@ -202,6 +204,7 @@ export default function TaskDetailPage() {
     : 0;
 
   return (
+    <>
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
       {/* Header */}
       <motion.div variants={item} className="flex items-center justify-between">
@@ -230,7 +233,7 @@ export default function TaskDetailPage() {
               <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                 <Edit3 className="h-4 w-4" />Edit
               </Button>
-              <Button variant="destructive" size="sm" onClick={handleDelete}>
+              <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
                 <Trash2 className="h-4 w-4" />Hapus
               </Button>
             </>
@@ -289,11 +292,8 @@ export default function TaskDetailPage() {
                     {task.deadline && (
                       <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" />Deadline: {formatDate(task.deadline)}</span>
                     )}
-                    {task.dosen && (
-                      <span className="flex items-center gap-1.5"><User className="h-4 w-4" />Dosen: {task.dosen.name}</span>
-                    )}
                     {task.course && (
-                      <span className="flex items-center gap-1.5"><BookOpen className="h-4 w-4" />{task.course.code || task.course.name}</span>
+                      <span className="flex items-center gap-1.5"><BookOpen className="h-4 w-4" />{task.course.name}</span>
                     )}
                   </div>
                 </>
@@ -430,15 +430,6 @@ export default function TaskDetailPage() {
                   </div>
                 </>
               )}
-              {task.dosen && (
-                <>
-                  <Separator />
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Dosen</span>
-                    <span>{task.dosen.name}</span>
-                  </div>
-                </>
-              )}
               {task.course && (
                 <>
                   <Separator />
@@ -453,5 +444,16 @@ export default function TaskDetailPage() {
         </motion.div>
       </div>
     </motion.div>
+
+    <ConfirmDialog
+      open={deleteOpen}
+      onOpenChange={setDeleteOpen}
+      title="Hapus tugas ini?"
+      description="Tugas beserta semua subtask dan riwayatnya akan dihapus secara permanen."
+      confirmLabel="Hapus Tugas"
+      loading={isDeleting}
+      onConfirm={handleDelete}
+    />
+    </>
   );
 }

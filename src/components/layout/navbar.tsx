@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { useAuthStore, useSidebarStore } from "@/store";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { getInitials } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
+import { LOCALE_LABELS } from "@/lib/i18n/translations";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { NotificationPanel } from "@/components/layout/notification-panel";
 import {
@@ -13,13 +15,28 @@ import {
   Sun,
   Moon,
   LogOut,
+  Languages,
+  Check,
 } from "lucide-react";
 
 export function Navbar() {
   const { theme, setTheme } = useTheme();
   const { user, setUser, logout } = useAuthStore();
   const { toggleMobile } = useSidebarStore();
+  const { locale, setLocale, locales, t } = useI18n();
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -57,6 +74,36 @@ export function Navbar() {
 
       {/* Right side */}
       <div className="flex items-center gap-2">
+        {/* Language switcher */}
+        <div className="relative" ref={langRef}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setLangOpen((o) => !o)}
+            className="text-muted-foreground hover:text-foreground"
+            title={t("nav.language")}
+          >
+            <Languages className="h-[18px] w-[18px]" />
+          </Button>
+          {langOpen && (
+            <div className="absolute right-0 top-10 z-50 w-40 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+              {locales.map((l) => (
+                <button
+                  key={l}
+                  onClick={() => {
+                    setLocale(l);
+                    setLangOpen(false);
+                  }}
+                  className="flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-muted"
+                >
+                  <span>{LOCALE_LABELS[l]}</span>
+                  {locale === l && <Check className="h-4 w-4 text-primary" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Theme toggle */}
         <Button
           variant="ghost"
@@ -81,9 +128,9 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex flex-col items-end">
             <span className="text-sm font-medium leading-none">{user?.name || "Loading..."}</span>
-            <span className="text-[11px] text-muted-foreground mt-0.5">
-              Ketua Kelas{user?.className ? ` ${user.className}` : ""}
-            </span>
+              <span className="text-[11px] text-muted-foreground mt-0.5">
+                {t("nav.classChair")}{user?.className ? ` ${user.className}` : ""}
+              </span>
           </div>
           <Avatar className="h-8 w-8">
             <AvatarFallback className="text-xs bg-primary/10 text-primary">

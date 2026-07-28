@@ -1,14 +1,17 @@
+import { NextRequest } from "next/server";
 import { successResponse, errorResponse } from "@/lib/api-response";
-import whatsappService from "@/lib/whatsapp/service";
+import { getUserIdFromRequest } from "@/lib/api-utils";
+import { getWhatsAppService } from "@/lib/whatsapp/service";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    await whatsappService.connect();
+    const userId = getUserIdFromRequest(request);
+    const waService = getWhatsAppService(userId);
+    await waService.connect();
 
-    // Wait a bit for QR to generate
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    const status = whatsappService.getStatus();
+    const status = waService.getStatus();
     return successResponse(status, "Silakan scan QR code");
   } catch (error) {
     console.error("WA QR error:", error);

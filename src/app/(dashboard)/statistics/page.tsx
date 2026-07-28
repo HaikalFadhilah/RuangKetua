@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/lib/i18n";
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
@@ -32,15 +33,14 @@ interface StatsData {
     byStatus: { status: string; _count: number }[];
   };
   announcements: number;
-  dosen: number;
+  courses: number;
   elearning: number;
   files: number;
   notes: number;
   activities: number;
 }
 
-const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04 } } };
-const item = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } };
+import { container, item } from "@/lib/animations";
 
 const PRIORITY_COLORS: Record<string, string> = {
   low: "#22c55e",
@@ -57,6 +57,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function StatisticsPage() {
+  const { t } = useI18n();
   const [stats, setStats] = useState<StatsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -66,7 +67,7 @@ export default function StatisticsPage() {
       const data = await res.json();
       if (data.success) setStats(data.data);
     } catch {
-      toast.error("Gagal mengambil statistik");
+      toast.error(t("stats.fetchError"));
     } finally {
       setIsLoading(false);
     }
@@ -96,8 +97,8 @@ export default function StatisticsPage() {
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
       <motion.div variants={item}>
-        <h1 className="text-2xl font-bold tracking-tight">Statistik</h1>
-        <p className="text-muted-foreground text-sm mt-1">Analisis dan grafik aktivitas kelas</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("nav.statistics")}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{t("stats.subtitle")}</p>
       </motion.div>
 
       {/* Main Stats */}
@@ -105,25 +106,25 @@ export default function StatisticsPage() {
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-blue-500/10"><ListTodo className="h-5 w-5 text-blue-400" /></div>
-            <div><p className="text-xs text-muted-foreground">Total Tugas</p><p className="text-2xl font-bold">{stats?.tasks.total || 0}</p></div>
+            <div><p className="text-xs text-muted-foreground">{t("stats.totalTasks")}</p><p className="text-2xl font-bold">{stats?.tasks.total || 0}</p></div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-green-500/10"><CheckCircle2 className="h-5 w-5 text-green-400" /></div>
-            <div><p className="text-xs text-muted-foreground">Selesai</p><p className="text-2xl font-bold">{stats?.tasks.completed || 0}</p></div>
+            <div><p className="text-xs text-muted-foreground">{t("stats.completed")}</p><p className="text-2xl font-bold">{stats?.tasks.completed || 0}</p></div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-yellow-500/10"><TrendingUp className="h-5 w-5 text-yellow-400" /></div>
-            <div><p className="text-xs text-muted-foreground">Progress</p><p className="text-2xl font-bold">{completionRate}%</p></div>
+            <div><p className="text-xs text-muted-foreground">{t("stats.progress")}</p><p className="text-2xl font-bold">{completionRate}%</p></div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-red-500/10"><AlertTriangle className="h-5 w-5 text-red-400" /></div>
-            <div><p className="text-xs text-muted-foreground">Terlambat</p><p className="text-2xl font-bold">{stats?.tasks.overdue || 0}</p></div>
+            <div><p className="text-xs text-muted-foreground">{t("stats.overdue")}</p><p className="text-2xl font-bold">{stats?.tasks.overdue || 0}</p></div>
           </CardContent>
         </Card>
       </motion.div>
@@ -133,25 +134,25 @@ export default function StatisticsPage() {
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-purple-500/10"><MessageSquare className="h-5 w-5 text-purple-400" /></div>
-            <div><p className="text-xs text-muted-foreground">Pengumuman</p><p className="text-lg font-bold">{stats?.announcements || 0}</p></div>
+            <div><p className="text-xs text-muted-foreground">{t("stats.announcements")}</p><p className="text-lg font-bold">{stats?.announcements || 0}</p></div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-indigo-500/10"><Users className="h-5 w-5 text-indigo-400" /></div>
-            <div><p className="text-xs text-muted-foreground">Dosen</p><p className="text-lg font-bold">{stats?.dosen || 0}</p></div>
+            <div><p className="text-xs text-muted-foreground">{t("stats.courses")}</p><p className="text-lg font-bold">{stats?.courses || 0}</p></div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-cyan-500/10"><BookOpen className="h-5 w-5 text-cyan-400" /></div>
-            <div><p className="text-xs text-muted-foreground">E-Learning</p><p className="text-lg font-bold">{stats?.elearning || 0}</p></div>
+            <div><p className="text-xs text-muted-foreground">{t("stats.elearning")}</p><p className="text-lg font-bold">{stats?.elearning || 0}</p></div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-teal-500/10"><FileText className="h-5 w-5 text-teal-400" /></div>
-            <div><p className="text-xs text-muted-foreground">File</p><p className="text-lg font-bold">{stats?.files || 0}</p></div>
+            <div><p className="text-xs text-muted-foreground">{t("stats.files")}</p><p className="text-lg font-bold">{stats?.files || 0}</p></div>
           </CardContent>
         </Card>
       </motion.div>
@@ -161,7 +162,7 @@ export default function StatisticsPage() {
         <motion.div variants={item}>
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" />Tugas per Prioritas</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" />{t("stats.byPriority")}</CardTitle>
             </CardHeader>
             <CardContent>
               {stats?.tasks.byPriority && stats.tasks.byPriority.length > 0 ? (
@@ -190,7 +191,7 @@ export default function StatisticsPage() {
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">Belum ada data tugas</p>
+                <p className="text-sm text-muted-foreground text-center py-8">{t("stats.noTaskData")}</p>
               )}
             </CardContent>
           </Card>
@@ -200,7 +201,7 @@ export default function StatisticsPage() {
         <motion.div variants={item}>
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><PieChart className="h-4 w-4 text-primary" />Status Tugas</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><PieChart className="h-4 w-4 text-primary" />{t("stats.byStatus")}</CardTitle>
             </CardHeader>
             <CardContent>
               {stats?.tasks.byStatus && stats.tasks.byStatus.length > 0 ? (
@@ -231,7 +232,7 @@ export default function StatisticsPage() {
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">Belum ada data tugas</p>
+                <p className="text-sm text-muted-foreground text-center py-8">{t("stats.noTaskData")}</p>
               )}
             </CardContent>
           </Card>
@@ -241,7 +242,7 @@ export default function StatisticsPage() {
         <motion.div variants={item}>
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><BookOpen className="h-4 w-4 text-primary" />Tugas per Mata Kuliah</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><BookOpen className="h-4 w-4 text-primary" />{t("stats.byCourse")}</CardTitle>
             </CardHeader>
             <CardContent>
               {stats?.tasks.byCourse && stats.tasks.byCourse.length > 0 ? (
@@ -271,7 +272,7 @@ export default function StatisticsPage() {
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">Belum ada data</p>
+                <p className="text-sm text-muted-foreground text-center py-8">{t("stats.noData")}</p>
               )}
             </CardContent>
           </Card>
@@ -281,7 +282,7 @@ export default function StatisticsPage() {
         <motion.div variants={item}>
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Activity className="h-4 w-4 text-primary" />Tingkat Penyelesaian</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><Activity className="h-4 w-4 text-primary" />{t("stats.completionRate")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col items-center justify-center py-4">
@@ -301,17 +302,17 @@ export default function StatisticsPage() {
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-3xl font-bold">{completionRate}%</span>
-                    <span className="text-xs text-muted-foreground">Selesai</span>
+                    <span className="text-xs text-muted-foreground">{t("stats.completed")}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-6 mt-4 text-sm">
                   <div className="flex items-center gap-1.5">
                     <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
-                    <span className="text-muted-foreground">Selesai: {stats?.tasks.completed || 0}</span>
+                    <span className="text-muted-foreground">{t("stats.completedCount", { count: stats?.tasks.completed || 0 })}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
-                    <span className="text-muted-foreground">Pending: {stats?.tasks.pending || 0}</span>
+                    <span className="text-muted-foreground">{t("stats.pendingCount", { count: stats?.tasks.pending || 0 })}</span>
                   </div>
                 </div>
               </div>

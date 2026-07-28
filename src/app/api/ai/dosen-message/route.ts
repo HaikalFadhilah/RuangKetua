@@ -1,9 +1,11 @@
 import { NextRequest } from "next/server";
 import { successResponse, errorResponse } from "@/lib/api-response";
+import { getUserIdFromRequest } from "@/lib/api-utils";
 import { callAI, PROMPTS } from "@/lib/ai/prompts";
 
 export async function POST(request: NextRequest) {
   try {
+    getUserIdFromRequest(request);
     const body = await request.json();
     const { template, dosenName, subject, details, senderName, className } = body;
 

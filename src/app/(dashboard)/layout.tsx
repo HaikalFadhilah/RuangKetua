@@ -1,29 +1,32 @@
-"use client";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import DashboardShell from "@/components/layout/dashboard-shell";
 
-import { Sidebar } from "@/components/layout/sidebar";
-import { Navbar } from "@/components/layout/navbar";
-import { useSidebarStore } from "@/store";
-import { cn } from "@/lib/utils";
-
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isOpen } = useSidebarStore();
+  const hdrs = await headers();
+  const userId = hdrs.get("x-user-id");
+  const role = hdrs.get("x-user-role");
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
-      <div
-        className={cn(
-          "transition-all duration-300 ease-in-out",
-          isOpen ? "lg:ml-64" : "lg:ml-[70px]"
-        )}
-      >
-        <Navbar />
-        <main className="p-4 lg:p-6">{children}</main>
-      </div>
-    </div>
-  );
+  // Admin bebas akses (tidak di-lock paywall)
+  if (userId && role !== "admin") {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { subscriptionEnd: true, subscriptionPlan: true },
+    });
+
+    if (user) {
+      const expired =
+        !user.subscriptionEnd || new Date(user.subscriptionEnd) < new Date();
+      if (expired) {
+        redirect("/locked");
+      }
+    }
+  }
+
+  return <DashboardShell>{children}</DashboardShell>;
 }

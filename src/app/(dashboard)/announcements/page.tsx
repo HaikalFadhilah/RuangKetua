@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, Bell, Megaphone, Edit3, Trash2, Pin, Loader2 } from "lucide-react";
 import { ANNOUNCEMENT_CATEGORIES } from "@/config/constants";
 import { formatRelativeTime } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 interface Announcement {
   id: string;
@@ -25,10 +26,10 @@ interface Announcement {
   createdAt: string;
 }
 
-const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04 } } };
-const item = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } };
+import { container, item } from "@/lib/animations";
 
 export default function AnnouncementsPage() {
+  const { t } = useI18n();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -48,7 +49,7 @@ export default function AnnouncementsPage() {
       const res = await fetch(`/api/announcements?${params}`);
       const data = await res.json();
       if (data.success) setAnnouncements(data.data);
-    } catch { toast.error("Gagal mengambil pengumuman"); }
+    } catch { toast.error(t("announce.toast.fetchError")); }
     finally { setIsLoading(false); }
   }, [search, categoryFilter]);
 
@@ -67,7 +68,7 @@ export default function AnnouncementsPage() {
   };
 
   const handleSave = async () => {
-    if (!form.title.trim() || !form.content.trim()) { toast.error("Judul dan konten wajib diisi"); return; }
+    if (!form.title.trim() || !form.content.trim()) { toast.error(t("announce.toast.required")); return; }
     setIsSaving(true);
     try {
       const url = editing ? `/api/announcements/${editing.id}` : "/api/announcements";
@@ -75,10 +76,10 @@ export default function AnnouncementsPage() {
       const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
-      toast.success(editing ? "Pengumuman diupdate" : "Pengumuman dibuat");
+      toast.success(editing ? t("announce.toast.updated") : t("announce.toast.created"));
       setIsDialogOpen(false);
       fetchAnnouncements();
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Gagal menyimpan"); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : t("announce.toast.saveError")); }
     finally { setIsSaving(false); }
   };
 
@@ -87,28 +88,28 @@ export default function AnnouncementsPage() {
       const res = await fetch(`/api/announcements/${id}`, { method: "DELETE" });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
-      toast.success("Pengumuman dihapus");
+      toast.success(t("announce.toast.deleted"));
       fetchAnnouncements();
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Gagal menghapus"); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : t("announce.toast.deleteError")); }
   };
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
       <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Pengumuman</h1>
-          <p className="text-muted-foreground text-sm mt-1">Kelola pengumuman kelas</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("nav.announcements")}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{t("announce.subtitle")}</p>
         </div>
-        <Button onClick={openCreate}><Plus className="h-4 w-4" />Buat Pengumuman</Button>
+        <Button onClick={openCreate}><Plus className="h-4 w-4" />{t("announce.create")}</Button>
       </motion.div>
 
       <motion.div variants={item} className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Cari pengumuman..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+          <Input placeholder={t("announce.searchPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
         <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="flex h-10 rounded-lg border border-border bg-background px-3 py-2 text-sm">
-          <option value="">Semua Kategori</option>
+          <option value="">{t("announce.allCategories")}</option>
           {ANNOUNCEMENT_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
         </select>
       </motion.div>
@@ -118,7 +119,7 @@ export default function AnnouncementsPage() {
       ) : announcements.length === 0 ? (
         <Card><CardContent className="flex flex-col items-center justify-center py-16">
           <Megaphone className="h-12 w-12 text-muted-foreground/30 mb-3" />
-          <p className="text-lg font-medium">Belum ada pengumuman</p>
+          <p className="text-lg font-medium">{t("announce.empty")}</p>
         </CardContent></Card>
       ) : (
         <motion.div variants={item} className="space-y-3">
@@ -134,7 +135,7 @@ export default function AnnouncementsPage() {
                     <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{a.content}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <Badge variant="secondary" className="text-[10px]">{a.category}</Badge>
-                      {a.broadcast && <Badge variant="success" className="text-[10px]">Broadcast</Badge>}
+                      {a.broadcast && <Badge variant="success" className="text-[10px]">{t("nav.broadcast")}</Badge>}
                       <span className="text-[11px] text-muted-foreground">{formatRelativeTime(a.createdAt)}</span>
                     </div>
                   </div>
@@ -152,26 +153,26 @@ export default function AnnouncementsPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Pengumuman" : "Buat Pengumuman"}</DialogTitle>
-            <DialogDescription>Isi detail pengumuman</DialogDescription>
+            <DialogTitle>{editing ? t("announce.editTitle") : t("announce.createTitle")}</DialogTitle>
+            <DialogDescription>{t("announce.dialogDesc")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2"><Label>Judul</Label><Input placeholder="Judul pengumuman" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Konten</Label><Textarea placeholder="Isi pengumuman..." value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={4} /></div>
+            <div className="space-y-2"><Label>{t("announce.fieldTitle")}</Label><Input placeholder={t("announce.titlePlaceholder")} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+            <div className="space-y-2"><Label>{t("announce.fieldContent")}</Label><Textarea placeholder={t("announce.contentPlaceholder")} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={4} /></div>
             <div className="space-y-2">
-              <Label>Kategori</Label>
+              <Label>{t("announce.fieldCategory")}</Label>
               <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="flex h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
                 {ANNOUNCEMENT_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
             <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={form.pinned} onChange={(e) => setForm({ ...form, pinned: e.target.checked })} className="rounded" />Pin Pengumuman</label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={form.broadcast} onChange={(e) => setForm({ ...form, broadcast: e.target.checked })} className="rounded" />Broadcast ke WhatsApp</label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={form.pinned} onChange={(e) => setForm({ ...form, pinned: e.target.checked })} className="rounded" />{t("announce.pin")}</label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={form.broadcast} onChange={(e) => setForm({ ...form, broadcast: e.target.checked })} className="rounded" />{t("announce.broadcastWa")}</label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Batal</Button>
-            <Button onClick={handleSave} disabled={isSaving}>{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Simpan"}</Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>{t("action.cancel")}</Button>
+            <Button onClick={handleSave} disabled={isSaving}>{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("action.save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

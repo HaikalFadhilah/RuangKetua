@@ -9,10 +9,9 @@ import pino from "pino";
 import path from "path";
 import fs from "fs";
 import QRCode from "qrcode";
+import prisma from "@/lib/prisma";
 
 const logger = pino({ level: "silent" });
-
-const AUTH_DIR = path.join(process.cwd(), ".whatsapp-auth");
 
 export interface WAStatus {
   connected: boolean;
@@ -31,6 +30,13 @@ class WhatsAppService {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private listeners: Map<string, ((...args: unknown[]) => void)[]> = new Map();
+  private authDir: string;
+  private userId: string;
+
+  constructor(userId: string) {
+    this.userId = userId;
+    this.authDir = path.join(process.cwd(), ".whatsapp-auth", userId);
+  }
 
   getStatus(): WAStatus {
     return {
@@ -54,6 +60,19 @@ class WhatsAppService {
     callbacks.forEach((cb) => cb(...args));
   }
 
+  private async persistStatus(status: "disconnected" | "connecting" | "connected") {
+    try {
+      if (!this.userId) return;
+      await prisma.whatsAppSession.upsert({
+        where: { userId: this.userId },
+        create: { userId: this.userId, status, updatedAt: new Date() },
+        update: { status, updatedAt: new Date() },
+      });
+    } catch (error) {
+      console.error("[WA] Failed to persist status:", error);
+    }
+  }
+
   async connect(): Promise<void> {
     if (this.status === "connected" || this.status === "connecting") {
       return;
@@ -61,13 +80,14 @@ class WhatsAppService {
 
     this.status = "connecting";
     this.emit("status", this.status);
+    void this.persistStatus("connecting");
 
     try {
-      if (!fs.existsSync(AUTH_DIR)) {
-        fs.mkdirSync(AUTH_DIR, { recursive: true });
+      if (!fs.existsSync(this.authDir)) {
+        fs.mkdirSync(this.authDir, { recursive: true });
       }
 
-      const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+      const { state, saveCreds } = await useMultiFileAuthState(this.authDir);
       const { version } = await fetchLatestBaileysVersion();
 
       this.sock = makeWASocket({
@@ -79,7 +99,6 @@ class WhatsAppService {
         generateHighQualityLinkPreview: true,
       });
 
-      // Handle connection updates
       this.sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
@@ -96,6 +115,7 @@ class WhatsAppService {
           this.user = null;
           this.qrCode = null;
           this.emit("status", this.status);
+          void this.persistStatus("disconnected");
 
           if (shouldReconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
@@ -123,12 +143,12 @@ class WhatsAppService {
           this.emit("status", this.status);
           console.log("[WA] Connected as", this.user?.name);
 
-          // Fetch groups
+          void this.persistStatus("connected");
+
           await this.fetchGroups();
         }
       });
 
-      // Save credentials
       this.sock.ev.on("creds.update", saveCreds);
     } catch (error) {
       console.error("[WA] Connection error:", error);
@@ -148,11 +168,12 @@ class WhatsAppService {
     this.groups = [];
     this.clearSession();
     this.emit("status", this.status);
+    void this.persistStatus("disconnected");
   }
 
   private clearSession(): void {
-    if (fs.existsSync(AUTH_DIR)) {
-      fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+    if (fs.existsSync(this.authDir)) {
+      fs.rmSync(this.authDir, { recursive: true, force: true });
     }
   }
 
@@ -198,7 +219,6 @@ class WhatsAppService {
       try {
         await this.sendMessage(groupId, message);
         success.push(groupId);
-        // Small delay between messages to avoid rate limiting
         await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch {
         failed.push(groupId);
@@ -218,15 +238,20 @@ class WhatsAppService {
   }
 }
 
-// Singleton
+// Per-user WhatsApp service registry
 const globalForWA = globalThis as unknown as {
-  whatsappService: WhatsAppService | undefined;
+  waRegistry: Map<string, WhatsAppService> | undefined;
 };
 
-export const whatsappService = globalForWA.whatsappService ?? new WhatsAppService();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForWA.whatsappService = whatsappService;
+if (!globalForWA.waRegistry) {
+  globalForWA.waRegistry = new Map();
 }
 
-export default whatsappService;
+export function getWhatsAppService(userId: string): WhatsAppService {
+  if (!globalForWA.waRegistry!.has(userId)) {
+    globalForWA.waRegistry!.set(userId, new WhatsAppService(userId));
+  }
+  return globalForWA.waRegistry!.get(userId)!;
+}
+
+export default getWhatsAppService;

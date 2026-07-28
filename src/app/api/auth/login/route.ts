@@ -21,6 +21,10 @@ export async function POST(request: NextRequest) {
       return errorResponse("Email atau password salah", 401);
     }
 
+    if (user.isSuspended) {
+      return errorResponse("Akun Anda telah ditangguhkan (Suspended) oleh Admin.", 403);
+    }
+
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
       return errorResponse("Email atau password salah", 401);
@@ -50,6 +54,17 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: "/",
     });
+
+    // ── Jika admin, juga set admin_token agar bisa akses /rk-dashboard ──
+    if (user.role === "admin") {
+      response.cookies.set("admin_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 8, // 8 jam
+        path: "/",
+      });
+    }
 
     return response;
   } catch (error) {

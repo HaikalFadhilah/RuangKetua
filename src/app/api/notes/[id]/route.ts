@@ -18,6 +18,7 @@ export async function PUT(
     const note = await prisma.stickyNote.update({
       where: { id },
       data: {
+        title: body.title !== undefined ? body.title : undefined,
         content: body.content !== undefined ? body.content : undefined,
         color: body.color || undefined,
         pinned: body.pinned !== undefined ? body.pinned : undefined,

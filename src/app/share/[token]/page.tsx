@@ -132,7 +132,7 @@ export default function SharePage() {
             href="/"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
           >
-            <RuangKetuaLogo size={18} />
+            <RuangKetuaLogo size={24} />
             Buka Ruang Ketua
           </a>
         </motion.div>
@@ -154,7 +154,7 @@ export default function SharePage() {
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-600/20 via-purple-600/20 to-pink-600/20 px-6 py-5 border-b border-slate-800">
           <div className="flex items-center gap-3 mb-4">
-            <RuangKetuaLogo size={28} />
+            <RuangKetuaLogo size={36} />
             <div>
               <h2 className="text-sm font-bold text-white">Ruang Ketua</h2>
               <p className="text-[10px] text-slate-400">File Sharing</p>

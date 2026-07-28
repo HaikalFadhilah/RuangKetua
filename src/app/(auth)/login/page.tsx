@@ -10,10 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RuangKetuaLogo } from "@/components/ui/ruang-ketua-logo";
+import { useI18n } from "@/lib/i18n";
 import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
 
@@ -31,14 +33,19 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!data.success) {
-        toast.error(data.error || "Login gagal");
+        toast.error(data.error || t("auth.login.failed"));
         return;
       }
 
-      toast.success("Login berhasil!");
-      router.push("/dashboard");
+      toast.success(t("auth.login.success"));
+      // Admin langsung diarahkan ke panel admin
+      if (data.data?.role === "admin") {
+        window.location.href = "/rk-dashboard";
+      } else {
+        window.location.href = "/dashboard";
+      }
     } catch {
-      toast.error("Terjadi kesalahan");
+      toast.error(t("auth.login.error"));
     } finally {
       setIsLoading(false);
     }
@@ -56,21 +63,21 @@ export default function LoginPage() {
           <div className="flex justify-center mb-4">
             <RuangKetuaLogo size={56} />
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
+          <CardTitle className="text-2xl font-bold">{t("auth.login.title")}</CardTitle>
           <CardDescription>
-            Masuk ke Ruang Ketua
+            {t("auth.login.subtitle")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("auth.login.email")}</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
-                  placeholder="ketua@email.com"
+                  placeholder={t("auth.login.emailPlaceholder")}
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   className="pl-10"
@@ -80,13 +87,13 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("auth.login.password")}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder={t("auth.login.passwordPlaceholder")}
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   className="pl-10"
@@ -100,7 +107,7 @@ export default function LoginPage() {
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  Masuk
+                  {t("auth.login.submit")}
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
@@ -108,9 +115,9 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            Belum punya akun?{" "}
+            {t("auth.login.noAccount")}{" "}
             <Link href="/register" className="text-primary hover:underline font-medium">
-              Daftar Sekarang
+              {t("auth.login.register")}
             </Link>
           </div>
         </CardContent>

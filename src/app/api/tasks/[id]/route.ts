@@ -14,8 +14,7 @@ export async function GET(
     const task = await prisma.task.findFirst({
       where: { id, userId },
       include: {
-        course: { select: { id: true, name: true, code: true } },
-        dosen: { select: { id: true, name: true } },
+        course: { select: { id: true, name: true, sks: true } },
         subtasks: true,
         history: { orderBy: { createdAt: "desc" }, take: 20 },
       },
@@ -46,7 +45,7 @@ export async function PUT(
       return errorResponse("Tugas tidak ditemukan", 404);
     }
 
-    const { title, description, courseId, dosenId, deadline, priority, status, subtasks } = body;
+    const { title, description, courseId, deadline, priority, status, subtasks } = body;
 
     // Track changes for history
     const changes: { field: string; oldValue: string | null; newValue: string | null }[] = [];
@@ -60,14 +59,12 @@ export async function PUT(
         title: title || undefined,
         description: description !== undefined ? description : undefined,
         courseId: courseId !== undefined ? courseId || null : undefined,
-        dosenId: dosenId !== undefined ? dosenId || null : undefined,
         deadline: deadline !== undefined ? (deadline ? new Date(deadline) : null) : undefined,
         priority: priority || undefined,
         status: status || undefined,
       },
       include: {
-        course: { select: { id: true, name: true, code: true } },
-        dosen: { select: { id: true, name: true } },
+        course: { select: { id: true, name: true, sks: true } },
         subtasks: true,
       },
     });

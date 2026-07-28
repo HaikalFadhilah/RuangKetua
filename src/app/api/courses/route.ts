@@ -5,9 +5,11 @@ import { getUserIdFromRequest } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
+    const userId = getUserIdFromRequest(request);
+
     const courses = await prisma.course.findMany({
+      where: { userId },
       include: {
-        dosen: { select: { id: true, name: true } },
         _count: { select: { tasks: true, elearnings: true, materials: true } },
       },
       orderBy: { name: "asc" },
@@ -24,25 +26,21 @@ export async function POST(request: NextRequest) {
   try {
     const userId = getUserIdFromRequest(request);
     const body = await request.json();
-    const { name, code, semester, schedule } = body;
+    const { name, sks, semester, schedule, dosenName, dosenWa } = body;
 
     if (!name) {
       return errorResponse("Nama mata kuliah wajib diisi", 400);
     }
 
-    if (code) {
-      const existing = await prisma.course.findUnique({ where: { code } });
-      if (existing) {
-        return errorResponse("Kode mata kuliah sudah digunakan", 400);
-      }
-    }
-
     const course = await prisma.course.create({
       data: {
+        userId,
         name,
-        code: code || null,
+        sks: sks ? (isNaN(parseInt(sks)) ? null : parseInt(sks)) : null,
         semester: semester || null,
         schedule: schedule || null,
+        dosenName: dosenName || null,
+        dosenWa: dosenWa || null,
       },
     });
 

@@ -1,9 +1,13 @@
+import { NextRequest } from "next/server";
 import { successResponse, errorResponse } from "@/lib/api-response";
-import whatsappService from "@/lib/whatsapp/service";
+import { getUserIdFromRequest } from "@/lib/api-utils";
+import { getWhatsAppService } from "@/lib/whatsapp/service";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    await whatsappService.disconnect();
+    const userId = getUserIdFromRequest(request);
+    const waService = getWhatsAppService(userId);
+    await waService.disconnect();
     return successResponse(null, "WhatsApp berhasil diputus");
   } catch (error) {
     console.error("WA Disconnect error:", error);

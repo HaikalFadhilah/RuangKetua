@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
         className: true,
         semester: true,
         avatar: true,
+        university: true,
       },
     });
 
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
       className: user.className,
       semester: user.semester,
       avatar: user.avatar,
+      university: user.university,
     });
   } catch {
     return errorResponse("Terjadi kesalahan", 500);

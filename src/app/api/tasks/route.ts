@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"; // Memaksa Next.js untuk selalu ambil data terbaru (bypass cache)
+
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse, paginatedResponse, getPaginationParams } from "@/lib/api-response";
@@ -10,11 +12,15 @@ export async function GET(request: NextRequest) {
     const { page, limit, skip } = getPaginationParams(searchParams);
 
     const search = searchParams.get("search") || "";
-    const status = searchParams.get("status") || "";
-    const priority = searchParams.get("priority") || "";
+    // Paksa jadi Uppercase agar cocok dengan Enum Prisma
+    const status = searchParams.get("status")?.toUpperCase(); 
+    const priority = searchParams.get("priority")?.toUpperCase();
     const courseId = searchParams.get("courseId") || "";
-    const sortBy = searchParams.get("sortBy") || "createdAt";
-    const sortOrder = (searchParams.get("sortOrder") || "desc") as "asc" | "desc";
+    const ALLOWED_SORT = ["createdAt", "deadline", "priority", "status", "title", "updatedAt"];
+    const rawSortBy = searchParams.get("sortBy") || "createdAt";
+    const sortBy = ALLOWED_SORT.includes(rawSortBy) ? rawSortBy : "createdAt";
+    const rawSortOrder = searchParams.get("sortOrder") || "desc";
+    const sortOrder = rawSortOrder === "asc" ? "asc" : "desc";
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { userId };
@@ -25,6 +31,7 @@ export async function GET(request: NextRequest) {
         { description: { contains: search } },
       ];
     }
+    
     if (status) where.status = status;
     if (priority) where.priority = priority;
     if (courseId) where.courseId = courseId;
@@ -33,11 +40,10 @@ export async function GET(request: NextRequest) {
       prisma.task.findMany({
         where,
         include: {
-          course: { select: { id: true, name: true, code: true } },
-          dosen: { select: { id: true, name: true } },
-          subtasks: true,
-          _count: { select: { subtasks: true } },
-        },
+        course: { select: { id: true, name: true, sks: true } },
+        subtasks: true,
+        _count: { select: { subtasks: true } },
+      },
         orderBy: { [sortBy]: sortOrder },
         skip,
         take: limit,
@@ -57,10 +63,29 @@ export async function POST(request: NextRequest) {
     const userId = getUserIdFromRequest(request);
     const body = await request.json();
 
-    const { title, description, courseId, dosenId, deadline, priority, subtasks } = body;
+    // Pastikan 'status' ikut diekstrak dari body
+    const { title, description, courseId, deadline, priority, status, subtasks } = body;
 
     if (!title) {
       return errorResponse("Judul tugas wajib diisi", 400);
+    }
+
+    // === PENYESUAIAN DATA SEBELUM MASUK PRISMA ===
+
+    // 1. Pastikan Priority & Status huruf besar atau fallback ke default
+    const validPriority = priority ? priority.toUpperCase() : "MEDIUM";
+    const validStatus = status ? status.toUpperCase() : "PENDING";
+    
+    // 2. Mencegah empty string ("") masuk ke Foreign Key
+    const validCourseId = courseId && courseId.trim() !== "" ? courseId : null;
+    
+    // 3. Pastikan deadline bukan Invalid Date
+    let validDeadline = null;
+    if (deadline) {
+      const parsedDate = new Date(deadline);
+      if (!isNaN(parsedDate.getTime())) {
+        validDeadline = parsedDate;
+      }
     }
 
     const task = await prisma.task.create({
@@ -68,10 +93,10 @@ export async function POST(request: NextRequest) {
         userId,
         title,
         description: description || null,
-        courseId: courseId || null,
-        dosenId: dosenId || null,
-        deadline: deadline ? new Date(deadline) : null,
-        priority: priority || "MEDIUM",
+        courseId: validCourseId,
+        deadline: validDeadline,
+        priority: validPriority,
+        status: validStatus, // Status sekarang masuk dengan format yang benar
         subtasks: subtasks?.length
           ? {
               create: subtasks.map((s: { title: string }) => ({
@@ -82,8 +107,7 @@ export async function POST(request: NextRequest) {
           : undefined,
       },
       include: {
-        course: { select: { id: true, name: true, code: true } },
-        dosen: { select: { id: true, name: true } },
+        course: { select: { id: true, name: true, sks: true } },
         subtasks: true,
       },
     });

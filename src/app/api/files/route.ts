@@ -2,11 +2,8 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { getUserIdFromRequest } from "@/lib/api-utils";
-import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-import { existsSync } from "fs";
-
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
+import { uploadFileWithFallback } from "@/lib/cloud/upload";
 
 const ALLOWED_TYPES = [
   "application/pdf",
@@ -77,25 +74,45 @@ export async function POST(request: NextRequest) {
       return errorResponse(`Tipe file ${ext || file.type} tidak diizinkan. Gunakan: PDF, DOCX, PPTX, ZIP, gambar, atau video.`, 400);
     }
 
-    if (!existsSync(UPLOAD_DIR)) {
-      await mkdir(UPLOAD_DIR, { recursive: true });
+    const buffer = Buffer.from(await file.arrayBuffer());
+    
+    // Upload file ke Google Drive pakai alokasi strategi user (auto=true)
+    const driveResult = await uploadFileWithFallback({
+      userId,
+      fileName: file.name,
+      mimeType: file.type || ext.replace(".", ""),
+      buffer,
+      auto: true,
+    });
+
+    if (!driveResult || !driveResult.id) {
+      throw new Error("Gagal mengupload ke Google Drive");
     }
 
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
-    const filePath = path.join(UPLOAD_DIR, uniqueName);
+    // Ambil webViewLink dari CloudFile yang baru dibuat
+    const cloudFile = await prisma.cloudFile.findUnique({
+      where: { id: driveResult.id },
+    });
 
-    const bytes = await file.arrayBuffer();
-    await writeFile(filePath, Buffer.from(bytes));
+    const fileUrl = cloudFile?.webViewLink || "#";
 
     const savedFile = await prisma.sharedFile.create({
       data: {
         userId,
         courseId: courseId || null,
         name: file.name,
-        fileUrl: `/uploads/${uniqueName}`,
+        fileUrl, // Pakai link Google Drive
         fileType: file.type || ext.replace(".", ""),
         fileSize: file.size,
       },
+    });
+
+    // Karena tidak ada kolom remoteFileId di SharedFile, kita simpan ID Drive-nya 
+    // ke dalam shareToken agar bisa digunakan sebagai penanda sinkronisasi hapus 
+    // (daripada merombak schema prisma yang bisa bikin app crash di production)
+    await prisma.sharedFile.update({
+      where: { id: savedFile.id },
+      data: { shareToken: `sync_${driveResult.remoteFileId || driveResult.id}` }
     });
 
     await prisma.activityLog.create({
@@ -104,13 +121,13 @@ export async function POST(request: NextRequest) {
         action: "CREATE",
         entity: "file",
         entityId: savedFile.id,
-        description: `Mengupload file: ${file.name}`,
+        description: `Mengupload file (GDrive): ${file.name}`,
       },
     });
 
-    return successResponse(savedFile, "File berhasil diupload", 201);
+    return successResponse(savedFile, "File berhasil diupload ke Google Drive", 201);
   } catch (error) {
     console.error("Files POST error:", error);
-    return errorResponse("Gagal mengupload file", 500);
+    return errorResponse(error instanceof Error ? error.message : "Gagal mengupload file", 500);
   }
 }

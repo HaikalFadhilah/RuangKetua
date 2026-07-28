@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/lib/i18n";
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
@@ -30,15 +31,16 @@ import {
   Loader2,
   ListTodo,
 } from "lucide-react";
-import type { TaskWithRelations, Priority, TaskStatus } from "@/types";
+import type { TaskWithRelations, Priority, TaskStatus, CourseWithRelations } from "@/types";
 import { getPriorityColor, getStatusColor, formatRelativeTime } from "@/lib/utils";
 import { PRIORITY_OPTIONS, STATUS_OPTIONS } from "@/config/constants";
 
-const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04 } } };
-const item = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } };
+import { container, item } from "@/lib/animations";
 
 export default function TasksPage() {
+  const { t } = useI18n();
   const [tasks, setTasks] = useState<TaskWithRelations[]>([]);
+  const [courses, setCourses] = useState<CourseWithRelations[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -51,10 +53,21 @@ export default function TasksPage() {
   const [form, setForm] = useState({
     title: "",
     description: "",
+    courseId: "",
     deadline: "",
     priority: "MEDIUM" as Priority,
     status: "PENDING" as TaskStatus,
   });
+
+  const fetchCourses = useCallback(async () => {
+    try {
+      const res = await fetch("/api/courses");
+      const data = await res.json();
+      if (data.success) setCourses(data.data);
+    } catch {
+      // fail silently
+    }
+  }, []);
 
   const fetchTasks = useCallback(async () => {
     setIsLoading(true);
@@ -69,7 +82,7 @@ export default function TasksPage() {
       const data = await res.json();
       if (data.success) setTasks(data.data);
     } catch {
-      toast.error("Gagal mengambil data tugas");
+      toast.error(t("tasks.fetchError"));
     } finally {
       setIsLoading(false);
     }
@@ -77,11 +90,12 @@ export default function TasksPage() {
 
   useEffect(() => {
     fetchTasks();
-  }, [fetchTasks]);
+    fetchCourses();
+  }, [fetchTasks, fetchCourses]);
 
   const openCreateDialog = () => {
     setEditingTask(null);
-    setForm({ title: "", description: "", deadline: "", priority: "MEDIUM", status: "PENDING" });
+    setForm({ title: "", description: "", courseId: "", deadline: "", priority: "MEDIUM", status: "PENDING" });
     setIsDialogOpen(true);
   };
 
@@ -90,6 +104,7 @@ export default function TasksPage() {
     setForm({
       title: task.title,
       description: task.description || "",
+      courseId: task.course?.id || "",
       deadline: task.deadline ? new Date(task.deadline).toISOString().slice(0, 16) : "",
       priority: task.priority,
       status: task.status,
@@ -99,7 +114,7 @@ export default function TasksPage() {
 
   const handleSave = async () => {
     if (!form.title.trim()) {
-      toast.error("Judul tugas wajib diisi");
+      toast.error(t("tasks.titleRequired"));
       return;
     }
 
@@ -120,11 +135,11 @@ export default function TasksPage() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
 
-      toast.success(editingTask ? "Tugas berhasil diupdate" : "Tugas berhasil dibuat");
+      toast.success(editingTask ? t("tasks.updateSuccess") : t("tasks.createSuccess"));
       setIsDialogOpen(false);
       fetchTasks();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal menyimpan tugas");
+      toast.error(err instanceof Error ? err.message : t("tasks.saveError"));
     } finally {
       setIsSaving(false);
     }
@@ -136,12 +151,12 @@ export default function TasksPage() {
       const res = await fetch(`/api/tasks/${deletingTaskId}`, { method: "DELETE" });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
-      toast.success("Tugas berhasil dihapus");
+      toast.success(t("tasks.deleteSuccess"));
       setIsDeleteDialogOpen(false);
       setDeletingTaskId(null);
       fetchTasks();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal menghapus tugas");
+      toast.error(err instanceof Error ? err.message : t("tasks.deleteError"));
     }
   };
 
@@ -157,9 +172,9 @@ export default function TasksPage() {
       setTasks((prev) =>
         prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t))
       );
-      toast.success(newStatus === "COMPLETED" ? "Tugas selesai!" : "Tugas dibuka kembali");
+      toast.success(newStatus === "COMPLETED" ? t("tasks.completed") : t("tasks.reopened"));
     } catch {
-      toast.error("Gagal mengupdate status");
+      toast.error(t("tasks.statusError"));
     }
   };
 
@@ -168,12 +183,12 @@ export default function TasksPage() {
       {/* Header */}
       <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Task Manager</h1>
-          <p className="text-muted-foreground text-sm mt-1">Kelola semua tugas kelas</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("nav.tasks")}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{t("tasks.subtitle")}</p>
         </div>
         <Button onClick={openCreateDialog}>
           <Plus className="h-4 w-4" />
-          Tambah Tugas
+          {t("tasks.new")}
         </Button>
       </motion.div>
 
@@ -182,7 +197,7 @@ export default function TasksPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Cari tugas..."
+            placeholder={t("tasks.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
@@ -194,7 +209,7 @@ export default function TasksPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="flex h-10 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <option value="">Semua Status</option>
+            <option value="">{t("tasks.allStatus")}</option>
             {STATUS_OPTIONS.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
@@ -204,7 +219,7 @@ export default function TasksPage() {
             onChange={(e) => setPriorityFilter(e.target.value)}
             className="flex h-10 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <option value="">Semua Prioritas</option>
+            <option value="">{t("tasks.allPriority")}</option>
             {PRIORITY_OPTIONS.map((p) => (
               <option key={p.value} value={p.value}>{p.label}</option>
             ))}
@@ -224,8 +239,8 @@ export default function TasksPage() {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16">
               <ListTodo className="h-12 w-12 text-muted-foreground/30 mb-3" />
-              <p className="text-lg font-medium">Belum ada tugas</p>
-              <p className="text-sm text-muted-foreground mt-1">Klik tombol di atas untuk menambah tugas baru</p>
+              <p className="text-lg font-medium">{t("tasks.empty")}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t("tasks.emptyHint")}</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -302,24 +317,37 @@ export default function TasksPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingTask ? "Edit Tugas" : "Tambah Tugas Baru"}</DialogTitle>
+            <DialogTitle>{editingTask ? t("tasks.editTitle") : t("tasks.createTitle")}</DialogTitle>
             <DialogDescription>
-              {editingTask ? "Perbarui detail tugas" : "Isi detail tugas yang ingin ditambahkan"}
+              {editingTask ? t("tasks.editDesc") : t("tasks.createDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Judul</Label>
+              <Label>{t("tasks.title")}</Label>
               <Input
-                placeholder="Judul tugas"
+                placeholder={t("tasks.titlePlaceholder")}
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label>Deskripsi</Label>
+              <Label>{t("tasks.course")}</Label>
+              <select
+                value={form.courseId}
+                onChange={(e) => setForm({ ...form, courseId: e.target.value })}
+                className="flex h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              >
+                <option value="">{t("tasks.selectCourse")}</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t("tasks.description")}</Label>
               <Textarea
-                placeholder="Deskripsi tugas..."
+                placeholder={t("tasks.descriptionPlaceholder")}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={3}
@@ -327,7 +355,7 @@ export default function TasksPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Prioritas</Label>
+                <Label>{t("tasks.priority")}</Label>
                 <select
                   value={form.priority}
                   onChange={(e) => setForm({ ...form, priority: e.target.value as Priority })}
@@ -339,7 +367,7 @@ export default function TasksPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label>{t("tasks.status")}</Label>
                 <select
                   value={form.status}
                   onChange={(e) => setForm({ ...form, status: e.target.value as TaskStatus })}
@@ -352,7 +380,7 @@ export default function TasksPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Deadline</Label>
+                <Label>{t("tasks.deadline")}</Label>
               <Input
                 type="datetime-local"
                 value={form.deadline}
@@ -361,9 +389,9 @@ export default function TasksPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Batal</Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>{t("action.cancel")}</Button>
             <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : editingTask ? "Simpan" : "Tambah"}
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : editingTask ? t("action.save") : t("action.add")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -373,14 +401,14 @@ export default function TasksPage() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Hapus Tugas</DialogTitle>
+            <DialogTitle>{t("tasks.deleteTitle")}</DialogTitle>
             <DialogDescription>
-              Apakah Anda yakin ingin menghapus tugas ini? Tindakan ini tidak dapat dibatalkan.
+              {t("tasks.deleteConfirm")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Batal</Button>
-            <Button variant="destructive" onClick={handleDelete}>Hapus</Button>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>{t("action.cancel")}</Button>
+            <Button variant="destructive" onClick={handleDelete}>{t("action.delete")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

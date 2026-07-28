@@ -1,14 +1,25 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/api-response";
+import { getUserIdFromRequest } from "@/lib/api-utils";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = getUserIdFromRequest(request);
     const { id } = await params;
     const body = await request.json();
+
+    // Pastikan elearning milik user ini via course
+    const existing = await prisma.eLearning.findUnique({
+      where: { id },
+      include: { course: { select: { userId: true } } },
+    });
+    if (!existing || existing.course.userId !== userId) {
+      return errorResponse("E-Learning tidak ditemukan", 404);
+    }
 
     const elearning = await prisma.eLearning.update({
       where: { id },
@@ -21,7 +32,7 @@ export async function PUT(
         reminders: body.reminders || undefined,
         isActive: body.isActive !== undefined ? body.isActive : undefined,
       },
-      include: { course: { select: { id: true, name: true, code: true } } },
+      include: { course: { select: { id: true, name: true, sks: true } } },
     });
 
     return successResponse(elearning, "E-Learning berhasil diupdate");
@@ -36,7 +47,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = getUserIdFromRequest(request);
     const { id } = await params;
+
+    const existing = await prisma.eLearning.findUnique({
+      where: { id },
+      include: { course: { select: { userId: true } } },
+    });
+    if (!existing || existing.course.userId !== userId) {
+      return errorResponse("E-Learning tidak ditemukan", 404);
+    }
+
     await prisma.eLearning.delete({ where: { id } });
     return successResponse(null, "E-Learning berhasil dihapus");
   } catch (error) {

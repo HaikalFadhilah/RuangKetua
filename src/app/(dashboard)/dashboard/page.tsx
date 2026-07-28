@@ -19,33 +19,32 @@ import {
   AlertTriangle,
   CheckCircle2,
   Timer,
+  FolderOpen,
+  Sheet,
+  Users,
+  StickyNote,
 } from "lucide-react";
 import Link from "next/link";
+import { useI18n } from "@/lib/i18n";
 import type { DashboardStats } from "@/types";
 import { formatRelativeTime, getDeadlineColor } from "@/lib/utils";
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05 },
-  },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0 },
-};
+import { container, item } from "@/lib/animations";
 
 const quickActions = [
-  { label: "Tambah Tugas", href: "/tasks", icon: Plus, color: "text-blue-400" },
-  { label: "Broadcast", href: "/broadcast", icon: Radio, color: "text-green-400" },
-  { label: "Reminder", href: "/elearning", icon: Bell, color: "text-yellow-400" },
-  { label: "Pengumuman", href: "/announcements", icon: Megaphone, color: "text-purple-400" },
+  { label: "dash.quickTask", href: "/tasks", icon: Plus, color: "text-primary" },
+  { label: "dash.quickBroadcast", href: "/broadcast", icon: Radio, color: "text-primary" },
+  { label: "dash.quickReminder", href: "/elearning", icon: Bell, color: "text-primary" },
+  { label: "dash.quickAnnouncement", href: "/announcements", icon: Megaphone, color: "text-primary" },
+  { label: "dash.quickFiles", href: "/files", icon: FolderOpen, color: "text-primary" },
+  { label: "dash.quickSpreadsheets", href: "/spreadsheets", icon: Sheet, color: "text-primary" },
+  { label: "dash.quickMembers", href: "/members", icon: Users, color: "text-primary" },
+  { label: "dash.quickNotes", href: "/notes", icon: StickyNote, color: "text-primary" },
 ];
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -79,15 +78,15 @@ export default function DashboardPage() {
       {/* Page Header */}
       <motion.div variants={item} className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("nav.dashboard")}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Ringkasan aktivitas kelas hari ini
+            {t("dash.subtitle")}
           </p>
         </div>
         <Button asChild>
           <Link href="/tasks">
             <Plus className="h-4 w-4" />
-            Tambah Tugas
+            {t("dash.quickTask")}
           </Link>
         </Button>
       </motion.div>
@@ -95,28 +94,28 @@ export default function DashboardPage() {
       {/* Stats Cards */}
       <motion.div variants={item} className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatsCard
-          label="Tugas Aktif"
+          label={t("dash.activeTasks")}
           value={stats?.activeTasks ?? 0}
           icon={<ListTodo className="h-5 w-5" />}
           color="text-blue-400"
           bgColor="bg-blue-400/10"
         />
         <StatsCard
-          label="Selesai"
+          label={t("dash.completed")}
           value={stats?.completedTasks ?? 0}
           icon={<CheckCircle2 className="h-5 w-5" />}
           color="text-green-400"
           bgColor="bg-green-400/10"
         />
         <StatsCard
-          label="Terlambat"
+          label={t("dash.overdue")}
           value={stats?.overdueTasks ?? 0}
           icon={<AlertTriangle className="h-5 w-5" />}
           color="text-red-400"
           bgColor="bg-red-400/10"
         />
         <StatsCard
-          label="Reminder Hari Ini"
+          label={t("dash.todayReminders")}
           value={stats?.todayReminders ?? 0}
           icon={<Bell className="h-5 w-5" />}
           color="text-yellow-400"
@@ -128,17 +127,17 @@ export default function DashboardPage() {
       <motion.div variants={item}>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Quick Actions</CardTitle>
+            <CardTitle className="text-base font-semibold">{t("dash.quickActions")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {quickActions.map((action) => (
                 <Link key={action.href} href={action.href}>
                   <div className="flex flex-col items-center gap-2 rounded-xl border border-border p-4 transition-all duration-200 hover:bg-accent hover:border-primary/30 hover:shadow-sm cursor-pointer group">
                     <div className={`p-2.5 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors`}>
                       <action.icon className={`h-5 w-5 ${action.color}`} />
                     </div>
-                    <span className="text-sm font-medium text-center">{action.label}</span>
+                    <span className="text-sm font-medium text-center">{t(action.label)}</span>
                   </div>
                 </Link>
               ))}
@@ -155,11 +154,11 @@ export default function DashboardPage() {
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <Clock className="h-4 w-4 text-orange-400" />
-                Deadline Terdekat
+                {t("dash.deadlinesTitle")}
               </CardTitle>
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/tasks" className="text-xs">
-                  Lihat Semua <ArrowRight className="h-3 w-3" />
+                  {t("dash.viewAll")} <ArrowRight className="h-3 w-3" />
                 </Link>
               </Button>
             </CardHeader>
@@ -173,7 +172,7 @@ export default function DashboardPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{task.title}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {task.course?.name || "Umum"}
+                         {task.course?.name || t("dash.general")}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 ml-3">
@@ -186,7 +185,7 @@ export default function DashboardPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Timer className="h-10 w-10 text-muted-foreground/30 mb-2" />
-                  <p className="text-sm text-muted-foreground">Tidak ada deadline mendatang</p>
+                  <p className="text-sm text-muted-foreground">{t("dash.noDeadlines")}</p>
                 </div>
               )}
             </CardContent>
@@ -199,11 +198,11 @@ export default function DashboardPage() {
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <Megaphone className="h-4 w-4 text-purple-400" />
-                Pengumuman Terbaru
+                {t("dash.announcementsTitle")}
               </CardTitle>
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/announcements" className="text-xs">
-                  Lihat Semua <ArrowRight className="h-3 w-3" />
+                  {t("dash.viewAll")} <ArrowRight className="h-3 w-3" />
                 </Link>
               </Button>
             </CardHeader>
@@ -228,7 +227,7 @@ export default function DashboardPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Megaphone className="h-10 w-10 text-muted-foreground/30 mb-2" />
-                  <p className="text-sm text-muted-foreground">Belum ada pengumuman</p>
+                  <p className="text-sm text-muted-foreground">{t("dash.noAnnouncements")}</p>
                 </div>
               )}
             </CardContent>
@@ -242,13 +241,13 @@ export default function DashboardPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-primary" />
-              Progress Semester
+              {t("dash.semesterProgress")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Progress</span>
+                <span className="text-muted-foreground">{t("dash.progress")}</span>
                 <span className="font-medium">{stats?.semesterProgress ?? 0}%</span>
               </div>
               <div className="h-2.5 rounded-full bg-muted overflow-hidden">

@@ -11,11 +11,8 @@ export async function DELETE(
     const userId = getUserIdFromRequest(request);
     const { id } = await params;
 
-    const event = await prisma.calendarEvent.findUnique({
-      where: { id },
-    });
-
-    if (!event) {
+    const event = await prisma.calendarEvent.findUnique({ where: { id } });
+    if (!event || event.userId !== userId) {
       return errorResponse("Event tidak ditemukan", 404);
     }
 
@@ -43,14 +40,12 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = getUserIdFromRequest(request);
     const { id } = await params;
     const body = await request.json();
 
-    const existing = await prisma.calendarEvent.findUnique({
-      where: { id },
-    });
-
-    if (!existing) {
+    const existing = await prisma.calendarEvent.findUnique({ where: { id } });
+    if (!existing || existing.userId !== userId) {
       return errorResponse("Event tidak ditemukan", 404);
     }
 

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const [user, settings] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, name: true, email: true, className: true, semester: true, avatar: true },
+        select: { id: true, name: true, email: true, className: true, semester: true, avatar: true, university: true },
       }),
       prisma.userSettings.findUnique({ where: { userId } }),
     ]);
@@ -26,16 +26,17 @@ export async function PUT(request: NextRequest) {
   try {
     const userId = getUserIdFromRequest(request);
     const body = await request.json();
-    const { name, className, semester, theme, reminderDefault, aiModel, language } = body;
+    const { name, className, semester, university, theme, reminderDefault, aiModel, language } = body;
 
     // Update user profile
-    if (name || className !== undefined || semester !== undefined) {
+    if (name || className !== undefined || semester !== undefined || university !== undefined) {
       await prisma.user.update({
         where: { id: userId },
         data: {
           name: name || undefined,
           className: className !== undefined ? className : undefined,
-          semester: semester !== undefined ? semester : undefined,
+          semester: semester !== undefined ? String(semester) : undefined,
+          university: university !== undefined ? university : undefined,
         },
       });
     }

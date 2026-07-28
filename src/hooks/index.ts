@@ -55,12 +55,14 @@ export function useFetch<T>(url: string, options?: RequestInit) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(url, options);
+      const res = await fetch(url, optionsRef.current);
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Something went wrong");
       setData(json.data);
@@ -69,7 +71,7 @@ export function useFetch<T>(url: string, options?: RequestInit) {
     } finally {
       setIsLoading(false);
     }
-  }, [url, options]);
+  }, [url]);
 
   useEffect(() => {
     fetchData();

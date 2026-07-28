@@ -79,9 +79,10 @@ export async function DELETE(
     const file = await prisma.sharedFile.findFirst({ where: { id, userId } });
     if (!file) return errorResponse("File tidak ditemukan", 404);
 
-    // Delete physical file
-    const filePath = path.join(process.cwd(), "public", file.fileUrl);
-    if (existsSync(filePath)) {
+    // Delete physical file (with path traversal protection)
+    const publicDir = path.resolve(process.cwd(), "public");
+    const filePath = path.resolve(publicDir, file.fileUrl);
+    if (filePath.startsWith(publicDir) && existsSync(filePath)) {
       await unlink(filePath);
     }
 

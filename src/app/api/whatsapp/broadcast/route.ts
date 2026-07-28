@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { getUserIdFromRequest } from "@/lib/api-utils";
-import whatsappService from "@/lib/whatsapp/service";
+import { getWhatsAppService } from "@/lib/whatsapp/service";
 import prisma from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
@@ -18,13 +18,13 @@ export async function POST(request: NextRequest) {
       return errorResponse("Pilih minimal satu grup", 400);
     }
 
-    if (!whatsappService.isConnected()) {
+    const waService = getWhatsAppService(userId);
+    if (!waService.isConnected()) {
       return errorResponse("WhatsApp tidak terhubung", 400);
     }
 
-    const result = await whatsappService.broadcastToMultipleGroups(groupIds, message);
+    const result = await waService.broadcastToMultipleGroups(groupIds, message);
 
-    // Log activity
     await prisma.activityLog.create({
       data: {
         userId,

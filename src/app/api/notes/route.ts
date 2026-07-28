@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     const note = await prisma.stickyNote.create({
       data: {
         userId,
+        title: body.title || "",
         content: body.content || "",
         color: body.color || "yellow",
         pinned: body.pinned || false,

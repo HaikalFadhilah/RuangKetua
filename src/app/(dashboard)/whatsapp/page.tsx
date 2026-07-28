@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import {
   MessageSquare,
   QrCode,
@@ -16,8 +17,15 @@ import {
   Users,
   Loader2,
   CheckCircle2,
-  Radio,
+  Search,
+  ShieldCheck,
+  Smartphone,
+  Info,
+  Radio
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface WAGroup {
   id: string;
@@ -34,11 +42,14 @@ interface WAStatusData {
 }
 
 export default function WhatsAppPage() {
+  const { t } = useI18n();
   const [waStatus, setWaStatus] = useState<WAStatusData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [searchGroup, setSearchGroup] = useState("");
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -54,9 +65,10 @@ export default function WhatsAppPage() {
 
   useEffect(() => {
     fetchStatus();
-    const interval = setInterval(fetchStatus, 5000);
+    const intervalTime = waStatus?.connected ? 15000 : 3000;
+    const interval = setInterval(fetchStatus, intervalTime);
     return () => clearInterval(interval);
-  }, [fetchStatus]);
+  }, [fetchStatus, waStatus?.connected]);
 
   const handleGenerateQR = async () => {
     setIsGenerating(true);
@@ -65,12 +77,11 @@ export default function WhatsAppPage() {
       const data = await res.json();
       if (data.success) {
         setWaStatus(data.data);
-        toast.success("QR Code generated! Silakan scan.");
       } else {
-        toast.error(data.error || "Gagal generate QR");
+        toast.error(data.error || t("wa.toast.qrError"));
       }
     } catch {
-      toast.error("Gagal menghubungi server");
+      toast.error(t("wa.toast.qrRequestError"));
     } finally {
       setIsGenerating(false);
     }
@@ -82,13 +93,15 @@ export default function WhatsAppPage() {
       const res = await fetch("/api/whatsapp/disconnect", { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        toast.success("WhatsApp berhasil diputus");
+        toast.success(t("wa.toast.disconnected"));
+        setSelectedGroups([]);
         fetchStatus();
       }
     } catch {
-      toast.error("Gagal memutus koneksi");
+      toast.error(t("wa.toast.disconnectError"));
     } finally {
       setIsDisconnecting(false);
+      setDisconnectOpen(false);
     }
   };
 
@@ -97,6 +110,10 @@ export default function WhatsAppPage() {
       prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
     );
   };
+
+  const filteredGroups = waStatus?.groups?.filter(g => 
+    g.subject.toLowerCase().includes(searchGroup.toLowerCase())
+  ) || [];
 
   const connectionStatus = waStatus?.connected
     ? "connected"
@@ -108,227 +125,169 @@ export default function WhatsAppPage() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-64" />
-        <div className="grid md:grid-cols-2 gap-6">
-          <Skeleton className="h-64 rounded-xl" />
-          <Skeleton className="h-64 rounded-xl" />
-        </div>
-        <Skeleton className="h-48 rounded-xl" />
+        <Skeleton className="h-64 rounded-xl" />
+        <Skeleton className="h-96 rounded-xl" />
       </div>
     );
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
+      transition={{ duration: 0.4 }}
+      className="space-y-8"
     >
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">WhatsApp Integration</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Kelola koneksi WhatsApp untuk broadcast dan reminder
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border pb-5">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            {t("wa.title")}
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            {t("wa.subtitle")}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className={cn("px-3 py-1 font-medium transition-colors", 
+              connectionStatus === "connected" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+              connectionStatus === "connecting" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+              "bg-slate-500/10 text-slate-500 border-slate-500/20"
+          )}>
+            <div className={cn("w-1.5 h-1.5 rounded-full mr-2", 
+              connectionStatus === "connected" ? "bg-emerald-500" :
+              connectionStatus === "connecting" ? "bg-amber-500 animate-pulse" :
+              "bg-slate-500"
+            )} />
+            {connectionStatus === "connected" ? t("wa.status.active") : 
+             connectionStatus === "connecting" ? t("wa.status.syncing") : t("wa.status.none")}
+          </Badge>
+        </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Status Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <MessageSquare className="h-5 w-5 text-green-500" />
-              Status Koneksi
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
-              {connectionStatus === "connected" ? (
-                <>
-                  <Wifi className="h-5 w-5 text-green-500" />
-                  <Badge variant="success">Connected</Badge>
-                </>
-              ) : connectionStatus === "connecting" ? (
-                <>
-                  <RefreshCw className="h-5 w-5 text-yellow-500 animate-spin" />
-                  <Badge variant="warning">Connecting...</Badge>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="h-5 w-5 text-red-500" />
-                  <Badge variant="destructive">Disconnected</Badge>
-                </>
-              )}
+      {/* SESSION CARD */}
+      <Card className="border-border shadow-sm overflow-hidden bg-card">
+        <CardContent className="p-0">
+          <div className="grid md:grid-cols-2 min-h-[300px]">
+            <div className="p-6 lg:p-8 flex flex-col justify-center border-b md:border-b-0 md:border-r border-border bg-muted/20">
+               {connectionStatus === "connected" && waStatus?.user ? (
+                 <div className="space-y-6">
+                    <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 shadow-inner">
+                      <ShieldCheck className="h-8 w-8 sm:h-10 sm:w-10 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">{t("wa.deviceLinked")}</h2>
+                      <p className="text-2xl font-bold text-foreground">{waStatus.user.name}</p>
+                      <div className="flex items-center gap-2 mt-2 text-sm text-foreground/80 bg-background/50 w-fit px-3 py-1.5 rounded-lg border shadow-sm">
+                         <Smartphone className="h-4 w-4" />
+                         <span className="font-mono font-medium tracking-tight">{waStatus.user.id.split(':')[0]}</span>
+                      </div>
+                    </div>
+                 </div>
+               ) : (
+                 <div className="space-y-4">
+                    <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-muted border border-border shadow-sm">
+                      <WifiOff className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">{t("wa.authRequired")}</h2>
+                      <p className="text-sm text-muted-foreground mt-2 leading-relaxed max-w-[90%]">
+                        {t("wa.authDesc")}
+                      </p>
+                    </div>
+                 </div>
+               )}
             </div>
 
-            {waStatus?.user && (
-              <div className="p-3 rounded-lg bg-green-500/5 border border-green-500/20">
-                <p className="text-sm font-medium text-green-400">
-                  <CheckCircle2 className="h-4 w-4 inline mr-1" />
-                  Login sebagai: {waStatus.user.name}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">ID: {waStatus.user.id}</p>
-              </div>
-            )}
+            <div className="p-6 lg:p-8 flex items-center justify-center relative bg-background">
+               <AnimatePresence mode="wait">
+                  {connectionStatus === "connected" ? (
+                     <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="w-full h-full flex flex-col items-center justify-center text-center space-y-6"
+                     >
+                        <div className="rounded-full bg-emerald-500/10 p-6 flex items-center justify-center border-4 border-emerald-500/20 shadow-sm">
+                           <CheckCircle2 className="h-14 w-14 text-emerald-500" />
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-foreground">{t("wa.fullyIntegrated")}</p>
+                          <p className="text-xs text-muted-foreground mt-1 max-w-[250px] mx-auto">{t("wa.sessionActiveDesc")}</p>
+                        </div>
+                        <Button 
+                           variant="outline" 
+                           onClick={() => setDisconnectOpen(true)} 
+                           disabled={isDisconnecting}
+                           className="mt-6 border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive/40 transition-colors shadow-sm font-medium px-6"
+                        >
+                           {isDisconnecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <WifiOff className="h-4 w-4 mr-2" />}
+                           {t("wa.disconnectBtn")}
+                        </Button>
+                     </motion.div>
+                  ) : (
+                     <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="w-full flex flex-col items-center"
+                     >
+                        {waStatus?.qr ? (
+                          <div className="space-y-6 flex flex-col items-center">
+                             <div className="p-4 bg-white rounded-3xl shadow-xl border border-slate-200 transition-all hover:scale-[1.02] duration-300">
+                               <img src={waStatus.qr} alt={t("wa.scanQrAlt")} className="h-[220px] w-[220px] sm:h-[260px] sm:w-[260px] select-none" draggable={false} />
+                             </div>
+                             
+                             <div className="bg-muted/40 w-[90%] sm:w-[280px] p-3 rounded-xl border border-border border-dashed text-center">
+                               <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5 font-medium leading-relaxed">
+                                 {t("wa.qrHint1")} &rarr; <br/> {t("wa.qrHint2")} &rarr; {t("wa.qrHint3")}
+                               </p>
+                             </div>
 
-            <div className="flex gap-2">
-              {connectionStatus !== "connected" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGenerateQR}
-                  disabled={isGenerating || connectionStatus === "connecting"}
-                >
-                  {isGenerating ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
+                             <Button size="sm" onClick={handleGenerateQR} disabled={isGenerating} variant="secondary" className="shadow-sm bg-background border font-medium px-4">
+                               {isGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />} {t("wa.refreshQr")}
+                             </Button>
+                          </div>
+                        ) : (
+                          <div className="text-center space-y-6 w-full flex flex-col items-center">
+                             <div className="h-32 w-32 rounded-3xl flex items-center justify-center border-[3px] border-dashed border-border bg-muted/30">
+                               <QrCode className="h-10 w-10 text-muted-foreground/40" />
+                             </div>
+                             <div className="space-y-1">
+                               <h3 className="text-sm font-bold">{t("wa.qrEmpty")}</h3>
+                               <p className="text-xs text-muted-foreground max-w-[200px] leading-relaxed mx-auto">
+                                 {t("wa.qrEmptyDesc")}
+                               </p>
+                             </div>
+                             <Button 
+                              onClick={handleGenerateQR} 
+                              disabled={isGenerating || connectionStatus === "connecting"}
+                              className="w-[200px] gap-2 shadow-sm font-semibold"
+                             >
+                               {isGenerating || connectionStatus === "connecting" ? (
+                                 <><Loader2 className="h-4 w-4 animate-spin" /> {t("wa.accessing")}</>
+                               ) : (
+                                 <><QrCode className="h-4 w-4" /> {t("wa.generateQr")}</>
+                               )}
+                             </Button>
+                          </div>
+                        )}
+                     </motion.div>
                   )}
-                  {connectionStatus === "connecting" ? "Menghubungkan..." : "Connect"}
-                </Button>
-              )}
-              {connectionStatus === "connected" && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleDisconnect}
-                  disabled={isDisconnecting}
-                >
-                  {isDisconnecting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <WifiOff className="h-4 w-4" />
-                  )}
-                  Disconnect
-                </Button>
-              )}
+               </AnimatePresence>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* QR Code Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <QrCode className="h-5 w-5 text-primary" />
-              QR Login
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center py-6">
-            {waStatus?.qr ? (
-              <>
-                <div className="rounded-xl overflow-hidden border-2 border-primary/20 shadow-lg">
-                  <img
-                    src={waStatus.qr}
-                    alt="WhatsApp QR Code"
-                    className="h-56 w-56"
-                  />
-                </div>
-                <p className="text-sm text-muted-foreground mt-3 text-center">
-                  Buka WhatsApp &gt; Menu &gt; Linked Devices &gt; Scan QR
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={handleGenerateQR}
-                  disabled={isGenerating}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Refresh QR
-                </Button>
-              </>
-            ) : connectionStatus === "connected" ? (
-              <div className="text-center py-8">
-                <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-3" />
-                <p className="text-sm font-medium text-green-400">WhatsApp Terhubung</p>
-                <p className="text-xs text-muted-foreground mt-1">Tidak perlu scan QR lagi</p>
-              </div>
-            ) : (
-              <>
-                <div className="h-48 w-48 rounded-xl border-2 border-dashed border-border flex items-center justify-center">
-                  <QrCode className="h-16 w-16 text-muted-foreground/30" />
-                </div>
-                <Button
-                  className="mt-4"
-                  variant="outline"
-                  onClick={handleGenerateQR}
-                  disabled={isGenerating}
-                >
-                  {isGenerating ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <QrCode className="h-4 w-4" />
-                  )}
-                  Generate QR Code
-                </Button>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Klik untuk membuat QR code baru
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Groups */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-base">
-              <Users className="h-5 w-5 text-blue-400" />
-              Grup WhatsApp ({waStatus?.groups?.length || 0})
-            </span>
-            {selectedGroups.length > 0 && (
-              <Badge variant="default" className="text-xs">
-                {selectedGroups.length} dipilih
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {connectionStatus !== "connected" ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              Hubungkan WhatsApp terlebih dahulu untuk melihat daftar grup
-            </p>
-          ) : waStatus?.groups && waStatus.groups.length > 0 ? (
-            <div className="grid md:grid-cols-2 gap-2">
-              {waStatus.groups.map((group) => (
-                <button
-                  key={group.id}
-                  onClick={() => toggleGroup(group.id)}
-                  className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all cursor-pointer ${
-                    selectedGroups.includes(group.id)
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/30 hover:bg-accent/50"
-                  }`}
-                >
-                  <div
-                    className={`h-4 w-4 rounded border-2 flex items-center justify-center shrink-0 ${
-                      selectedGroups.includes(group.id)
-                        ? "border-primary bg-primary"
-                        : "border-muted-foreground/30"
-                    }`}
-                  >
-                    {selectedGroups.includes(group.id) && (
-                      <CheckCircle2 className="h-3 w-3 text-primary-foreground" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{group.subject}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {group.size} anggota
-                    </p>
-                  </div>
-                  <Radio className="h-4 w-4 text-muted-foreground/30" />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              Tidak ada grup ditemukan
-            </p>
-          )}
+          </div>
         </CardContent>
       </Card>
+
+      {/* GROUPS CARD DIHAPUS (Dipindah ke halaman Broadcast) */}
+
+      <ConfirmDialog
+        open={disconnectOpen}
+        onOpenChange={setDisconnectOpen}
+        title="Putuskan WhatsApp?"
+        description="Sesi WhatsApp akan diputus dan kamu perlu scan QR ulang untuk menghubungkan kembali."
+        confirmLabel="Putuskan"
+        loading={isDisconnecting}
+        onConfirm={handleDisconnect}
+      />
     </motion.div>
   );
 }
