@@ -6,7 +6,11 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function buildConnectionUrl(): string {
-  let url = process.env.DATABASE_URL!;
+  let url = process.env.DATABASE_URL;
+
+  if (!url) {
+    throw new Error("DATABASE_URL environment variable is not set");
+  }
 
   // mariadb driver requires "mariadb://" protocol, not "mysql://"
   if (url.startsWith("mysql://")) {
@@ -50,10 +54,13 @@ function createPrismaClient(): PrismaClient {
   return new PrismaClient({ adapter }) as unknown as PrismaClient;
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+function getPrisma(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+  }
+  return globalForPrisma.prisma;
 }
+
+export const prisma = getPrisma();
 
 export default prisma;

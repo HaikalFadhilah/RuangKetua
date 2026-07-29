@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeSanitize from "rehype-sanitize";
 import toast from "react-hot-toast";
 import {
   FileText, Plus, Pencil, Trash2, Eye, Save, X,
@@ -385,7 +386,7 @@ export function BlogManager() {
 
               {preview ? (
                 <div className={cn("min-h-[300px] rounded-lg border border-border bg-background p-6", markdownClass)}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{form.content || "_Belum ada konten_"}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{form.content || "_Belum ada konten_"}</ReactMarkdown>
                 </div>
               ) : (
                 <Textarea

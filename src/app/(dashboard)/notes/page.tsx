@@ -21,7 +21,7 @@ interface Note {
 
 import { container } from "@/lib/animations";
 
-const noteVariant = { hidden: { opacity: 0, y: 16, scale: 0.97 }, show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 300, damping: 24 } } };
+const noteVariant = { hidden: { opacity: 0, y: 16, scale: 0.97 }, show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring" as const, stiffness: 300, damping: 24 } } };
 
 const COLOR_MAP: Record<string, { bg: string; border: string; dot: string; text: string; placeholder: string; divider: string; action: string; inputBg: string }> = {
   yellow:  { bg: "bg-yellow-50 dark:bg-yellow-950/40",  border: "border-yellow-200 dark:border-yellow-800/60",  dot: "bg-yellow-400",  text: "text-yellow-900 dark:text-yellow-100",  placeholder: "placeholder:text-yellow-700/40 dark:placeholder:text-yellow-300/30",  divider: "border-yellow-200/70 dark:border-yellow-700/40",  action: "hover:bg-yellow-200/60 dark:hover:bg-yellow-800/40",  inputBg: "bg-yellow-100/60 dark:bg-yellow-900/30" },

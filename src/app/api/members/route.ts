@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return successResponse(newMember, 201);
+    return successResponse(newMember, "Anggota berhasil ditambahkan", 201);
   } catch (error: any) {
     console.error("POST /api/members error:", error);
     return errorResponse(error.message || "Internal server error", 500);
@@ -78,7 +78,7 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    return successResponse(updatedMember, 200);
+    return successResponse(updatedMember, "Anggota berhasil diperbarui");
   } catch (error: any) {
     console.error("PUT /api/members error:", error);
     return errorResponse(error.message || "Internal server error", 500);

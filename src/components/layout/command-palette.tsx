@@ -92,7 +92,7 @@ export function CommandPalette() {
     { id: "settings", labelKey: "nav.settings", descriptionKey: "cmd.item.settingsDesc", icon: Settings, action: () => nav("/settings"), category: "navigate", keywords: ["pengaturan", "profil", "password", "tema"] },
     
     // Admin only
-    ...(user?.role === "super_admin" || user?.role === "admin" ? [{ id: "admin", labelKey: "admin.nav.dashboard", descriptionKey: "cmd.item.adminDesc", icon: ShieldCheck, action: () => nav("/rk-dashboard"), category: "navigate", keywords: ["panel", "super", "kelola"] }] : []),
+    ...(user?.role === "super_admin" || user?.role === "admin" ? [{ id: "admin", labelKey: "admin.nav.dashboard", descriptionKey: "cmd.item.adminDesc", icon: ShieldCheck, action: () => nav("/rk-dashboard"), category: "navigate" as const, keywords: ["panel", "super", "kelola"] } as CommandItem] : []),
 
     // Quick Actions
     { id: "new-task", labelKey: "cmd.item.newTask", icon: Plus, action: () => nav("/tasks"), category: "action", keywords: ["tambah", "buat", "new", "task"] },

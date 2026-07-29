@@ -12,7 +12,22 @@ export async function GET(request: NextRequest) {
     if (!settings) {
       settings = await prisma.systemSettings.create({ data: {} });
     }
-    return successResponse(settings);
+    return successResponse({
+      id: settings.id,
+      maintenanceMode: settings.maintenanceMode,
+      maintenanceMsg: settings.maintenanceMsg,
+      maxFileUploadMb: settings.maxFileUploadMb,
+      appName: settings.appName,
+      adminWhatsapp: settings.adminWhatsapp,
+      priceMonthly: settings.priceMonthly,
+      priceHalfYear: settings.priceHalfYear,
+      priceYearly: settings.priceYearly,
+      pricingEnabled: settings.pricingEnabled,
+      pakasirSlug: settings.pakasirSlug,
+      pakasirSandbox: settings.pakasirSandbox,
+      pakasirEnabled: settings.pakasirEnabled,
+      updatedAt: settings.updatedAt,
+    });
   } catch (error) {
     console.error("GET /api/admin/system-settings error:", error);
     return errorResponse("Terjadi kesalahan", 500);

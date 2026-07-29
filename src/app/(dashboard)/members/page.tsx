@@ -3,13 +3,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { container, item } from "@/lib/animations";
-import { Users, Plus, Loader2, Trash2, Search, MoreVertical, Edit2, ScanText } from "lucide-react";
+import { Users, Plus, Loader2, Trash2, Search, Edit2, ScanText } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import toast from "react-hot-toast";
@@ -25,8 +24,6 @@ type ClassMember = {
   memberType: string;
   revisiCourses: string | null;
 };
-
-import DashboardShell from "@/components/layout/dashboard-shell";
 
 export default function MembersPage() {
   const { t } = useI18n();

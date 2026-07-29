@@ -3,9 +3,10 @@ import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 
 // [FIX Diterapkan]: Memaksa pengambilan key agar konsisten antara Edge Config & Node Config
-const rawSecret = process.env.JWT_SECRET && process.env.JWT_SECRET.length > 0 
-  ? process.env.JWT_SECRET 
-  : "dev-secret-key-change-in-production-min-32-chars!!";
+const rawSecret = process.env.JWT_SECRET;
+if (!rawSecret || rawSecret.length < 32) {
+  throw new Error("JWT_SECRET environment variable is not set or too short (min 32 chars)");
+}
 
 const JWT_SECRET = new TextEncoder().encode(rawSecret);
 

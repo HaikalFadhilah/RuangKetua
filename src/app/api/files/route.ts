@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     // (daripada merombak schema prisma yang bisa bikin app crash di production)
     await prisma.sharedFile.update({
       where: { id: savedFile.id },
-      data: { shareToken: `sync_${driveResult.remoteFileId || driveResult.id}` }
+      data: { shareToken: `sync_${driveResult.id}` }
     });
 
     await prisma.activityLog.create({

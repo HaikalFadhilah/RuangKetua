@@ -279,7 +279,7 @@ export default function ForumPage() {
     [activeTab, page]
   );
 
-  useEffect(() => { fetchPosts(true); }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPosts([]); fetchPosts(true); }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Open detail ──────────────────────────────────────
   const handleOpenPost = async (post: ForumPostWithRole) => {

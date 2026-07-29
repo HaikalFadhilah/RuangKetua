@@ -41,8 +41,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const userId = getUserIdFromRequest(request);
+    const userRole = request.headers.get("x-user-role") || "";
     const body = await request.json();
-    const { title, content, category, pinned, broadcast } = body;
+    const { title, content, category, pinned } = body;
 
     if (!title || !content) return errorResponse("Judul dan konten wajib diisi", 400);
 
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
         content,
         category: category || "general",
         pinned: pinned || false,
-        broadcast: broadcast || false,
+        broadcast: userRole === "admin" ? (body.broadcast || false) : false,
       },
     });
 

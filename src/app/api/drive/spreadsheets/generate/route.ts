@@ -104,8 +104,7 @@ export async function POST(request: NextRequest) {
       fileId: cloudFile.id,
       remoteFileId: spreadsheetId,
       webViewLink: cloudFile.webViewLink,
-      message: `Spreadsheet ${title} berhasil dibuat dengan template ${templateType}`
-    }, 201);
+    }, `Spreadsheet ${title} berhasil dibuat dengan template ${templateType}`, 201);
 
   } catch (error: any) {
     console.error("POST /api/drive/spreadsheets/generate error:", error);

@@ -9,5 +9,12 @@ export async function POST() {
     maxAge: 0,
     path: "/",
   });
+  res.cookies.set("admin_token", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 0,
+    path: "/",
+  });
   return res;
 }
