@@ -33,9 +33,11 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [inputMsg, setInputMsg] = useState("");
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
-  const fetchMessages = useCallback(async (isBackground = false) => {
-    if (!isBackground) setLoading(true);
+  // ── Fetch initial messages ──────────────────────────
+  const fetchMessages = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch(`/api/chat?category=${activeTab}`);
       const data = await res.json();
@@ -43,17 +45,79 @@ export default function ChatPage() {
       const reversed = (data.data as ChatMessageWithRole[]).reverse();
       setMessages(reversed);
     } catch {
-      if (!isBackground) toast.error(t("chat.loadError"));
+      toast.error(t("chat.loadError"));
     } finally {
-      if (!isBackground) setLoading(false);
+      setLoading(false);
     }
+  }, [activeTab, t]);
+
+  // ── SSE connection for real-time updates ────────────
+  const connectSSE = useCallback(() => {
+    // Close existing connection
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+
+    const url = `/api/chat/stream?category=${activeTab}`;
+    const es = new EventSource(url);
+    eventSourceRef.current = es;
+
+    es.onmessage = (event) => {
+      try {
+        const newMessages: ChatMessageWithRole[] = JSON.parse(event.data);
+        if (newMessages.length > 0) {
+          setMessages((prev) => {
+            // Deduplicate by id
+            const existingIds = new Set(prev.map((m) => m.id));
+            const uniqueNew = newMessages.filter((m) => !existingIds.has(m.id));
+            if (uniqueNew.length === 0) return prev;
+            return [...prev, ...uniqueNew];
+          });
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    es.onerror = () => {
+      // Auto-reconnect is built into EventSource
+      // Close and reconnect after a delay if needed
+      es.close();
+      eventSourceRef.current = null;
+      setTimeout(() => {
+        if (document.visibilityState !== "hidden") {
+          connectSSE();
+        }
+      }, 3000);
+    };
   }, [activeTab]);
 
+  // ── Init: fetch messages + start SSE ────────────────
   useEffect(() => {
     fetchMessages();
-    const interval = setInterval(() => fetchMessages(true), 5000);
-    return () => clearInterval(interval);
-  }, [fetchMessages]);
+    // Small delay to let initial fetch complete before SSE starts
+    const sseTimeout = setTimeout(() => connectSSE(), 1000);
+
+    return () => {
+      clearTimeout(sseTimeout);
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, [fetchMessages, connectSSE]);
+
+  // ── Reconnect on tab visibility change ──────────────
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && !eventSourceRef.current) {
+        connectSSE();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [connectSSE]);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -82,7 +146,12 @@ export default function ChatPage() {
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
-      setMessages((prev) => [...prev, data.data]);
+      // Add immediately (SSE will deduplicate)
+      setMessages((prev) => {
+        const exists = prev.some((m) => m.id === data.data.id);
+        if (exists) return prev;
+        return [...prev, data.data];
+      });
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : t("chat.sendError"));
       setInputMsg(tempMsg);
@@ -162,7 +231,13 @@ export default function ChatPage() {
     <motion.div variants={container} initial="hidden" animate="show" className="flex flex-col h-[calc(100vh-100px)] space-y-4">
       <motion.div variants={itemAnimation}>
         <h1 className="text-2xl font-bold tracking-tight">{t("chat.title")}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{t("chat.subtitle")}</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          {t("chat.subtitle")}
+          <span className="ml-2 inline-flex items-center gap-1 text-xs text-green-500">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+            {t("chat.realtime")}
+          </span>
+        </p>
       </motion.div>
 
       <motion.div variants={itemAnimation} className="flex flex-col flex-1 min-h-0">

@@ -1,6 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
 
+function isAdminRole(role?: string) {
+  return role === "admin" || role === "super_admin";
+}
+
+const DASHBOARD_ROUTE_PREFIXES = [
+  "/dashboard",
+  "/tasks",
+  "/courses",
+  "/calendar",
+  "/forum",
+  "/chat",
+  "/settings",
+  "/elearning",
+  "/broadcast",
+  "/whatsapp",
+  "/repository",
+  "/announcements",
+  "/statistics",
+  "/ai-assistant",
+  "/ocr",
+  "/drive",
+  "/files",
+  "/spreadsheets",
+  "/members",
+  "/notes",
+  "/activity",
+  "/notifications",
+  "/tickets",
+  "/payment",
+  "/reminders",
+] as const;
+
+function matchesRoutePrefix(pathname: string, prefix: string) {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function requestWithAuthHeaders(request: NextRequest, payload: Awaited<ReturnType<typeof verifyToken>>) {
+  if (!payload) return {};
+
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-user-id", payload.userId);
+  requestHeaders.set("x-user-name", payload.name);
+  requestHeaders.set("x-user-role", payload.role);
+
+  return { request: { headers: requestHeaders } };
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -13,7 +60,7 @@ export async function proxy(request: NextRequest) {
       // Jika user biasa login (ada token) nyoba buka rk-dashboard, kita cek dulu role-nya
       if (userToken) {
          const userPayload = await verifyToken(userToken);
-         if (userPayload && (userPayload.role === "admin" || userPayload.role === "super_admin")) {
+         if (userPayload && isAdminRole(userPayload.role)) {
             // Beri izin masuk ke rk-superadmin buat set token admin
             return NextResponse.redirect(new URL("/rk-superadmin", request.url));
          }
@@ -23,7 +70,7 @@ export async function proxy(request: NextRequest) {
     }
 
     const payload = await verifyToken(adminToken);
-    if (!payload || (payload.role !== "admin" && payload.role !== "super_admin")) {
+    if (!payload || !isAdminRole(payload.role)) {
       const res = userToken 
          ? NextResponse.redirect(new URL("/dashboard", request.url)) 
          : NextResponse.redirect(new URL("/rk-superadmin", request.url));
@@ -31,12 +78,7 @@ export async function proxy(request: NextRequest) {
       return res;
     }
 
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set("x-user-id", payload.userId);
-    requestHeaders.set("x-user-name", payload.name);
-    requestHeaders.set("x-user-role", payload.role);
-
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    return NextResponse.next(requestWithAuthHeaders(request, payload));
   }
 
   // ── HIDE LOGIN ADMIN DARI USER BIASA YANG ISENG ──
@@ -47,7 +89,7 @@ export async function proxy(request: NextRequest) {
     // Redirect admin yang sudah login (via admin_token) ke dashboard admin
     if (adminToken) {
       const payload = await verifyToken(adminToken);
-      if (payload?.role === "admin") {
+      if (isAdminRole(payload?.role)) {
         return NextResponse.redirect(new URL("/rk-dashboard", request.url));
       }
     }
@@ -57,7 +99,7 @@ export async function proxy(request: NextRequest) {
     if (userToken) {
       const payload = await verifyToken(userToken);
       // Kalau user biasa (bukan admin), redirect ke /dashboard
-      if (payload && payload.role !== "admin") {
+      if (payload && !isAdminRole(payload.role)) {
         return NextResponse.redirect(new URL("/dashboard", request.url));
       }
       // Kalau ternyata role admin via token user, biarkan akses halaman login admin
@@ -67,28 +109,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── USER DASHBOARD ROUTES ───────────────────────────────────
-  if (
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/tasks") ||
-    pathname.startsWith("/courses") ||
-    pathname.startsWith("/calendar") ||
-    pathname.startsWith("/forum") ||
-    pathname.startsWith("/chat") ||
-    pathname.startsWith("/settings") ||
-    pathname.startsWith("/elearning") ||
-    pathname.startsWith("/broadcast") ||
-    pathname.startsWith("/whatsapp") ||
-    pathname.startsWith("/repository") ||
-    pathname.startsWith("/announcements") ||
-    pathname.startsWith("/statistics") ||
-    pathname.startsWith("/ai-assistant") ||
-    pathname.startsWith("/ocr") ||
-    pathname.startsWith("/files") ||
-    pathname.startsWith("/notes") ||
-    pathname.startsWith("/activity") ||
-    pathname.startsWith("/notifications") ||
-    pathname.startsWith("/payment")
-  ) {
+  if (DASHBOARD_ROUTE_PREFIXES.some((prefix) => matchesRoutePrefix(pathname, prefix))) {
     const token = request.cookies.get("token")?.value;
     const adminToken = request.cookies.get("admin_token")?.value;
     const baseToken = token || adminToken;
@@ -102,12 +123,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set("x-user-id", payload.userId);
-    requestHeaders.set("x-user-role", payload.role);
-    requestHeaders.set("x-user-name", payload.name);
-
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    return NextResponse.next(requestWithAuthHeaders(request, payload));
   }
 
   // ── API ROUTES ──────────────────────────────────────────────
@@ -115,6 +131,10 @@ export async function proxy(request: NextRequest) {
       !pathname.startsWith("/api/auth/login") &&
       !pathname.startsWith("/api/auth/register") &&
       !pathname.startsWith("/api/auth/logout") &&
+      !pathname.startsWith("/api/auth/forgot-password") &&
+      !pathname.startsWith("/api/auth/reset-password") &&
+      !pathname.startsWith("/api/auth/magic-link") &&
+      !pathname.startsWith("/api/cron/") &&
       !pathname.startsWith("/api/admin/auth") &&
       !pathname.startsWith("/api/public/") &&
       !pathname.startsWith("/api/payment/callback") &&
@@ -130,12 +150,9 @@ export async function proxy(request: NextRequest) {
 
       const payload = await verifyToken(tokenToVerify);
       if (!payload) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      if (!isAdminRole(payload.role)) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
 
-      const requestHeaders = new Headers(request.headers);
-      requestHeaders.set("x-user-id", payload.userId);
-      requestHeaders.set("x-user-role", payload.role);
-      requestHeaders.set("x-user-name", payload.name);
-      return NextResponse.next({ request: { headers: requestHeaders } });
+      return NextResponse.next(requestWithAuthHeaders(request, payload));
     }
 
     // Regular API - coba user token dulu, fallback ke admin_token
@@ -148,12 +165,7 @@ export async function proxy(request: NextRequest) {
     const payload = await verifyToken(tokenToTry);
     if (!payload) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set("x-user-id", payload.userId);
-    requestHeaders.set("x-user-role", payload.role);
-    requestHeaders.set("x-user-name", payload.name);
-
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    return NextResponse.next(requestWithAuthHeaders(request, payload));
   }
 
   return NextResponse.next();
@@ -176,10 +188,15 @@ export const config = {
     "/statistics/:path*",
     "/ai-assistant/:path*",
     "/ocr/:path*",
+    "/drive/:path*",
     "/files/:path*",
+    "/spreadsheets/:path*",
+    "/members/:path*",
     "/notes/:path*",
+    "/reminders/:path*",
     "/activity/:path*",
     "/notifications/:path*",
+    "/tickets/:path*",
     "/payment/:path*",
     "/locked/:path*",
     "/rk-superadmin",

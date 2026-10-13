@@ -29,9 +29,15 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
+*.err
+/.devserver.log
+/dev.log
+/dev.err
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -50,4 +56,8 @@ next-env.d.ts
 /public/uploads/*
 !/public/uploads/.gitkeep
 
-.vercel
+# local tool state
+.claude/
+
+# local database dumps
+/dump_*.sql

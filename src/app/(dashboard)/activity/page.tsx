@@ -7,21 +7,11 @@ import toast from "react-hot-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity as ActivityIcon, Plus, Edit3, Trash2, Radio, Bell, MessageSquare, LogIn, LogOut } from "lucide-react";
+import { Activity as ActivityIcon } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import type { ActivityLogEntry } from "@/types";
 
 import { container, item } from "@/lib/animations";
-
-const actionIcons: Record<string, React.ReactNode> = {
-  CREATE: <Plus className="h-3.5 w-3.5" />,
-  UPDATE: <Edit3 className="h-3.5 w-3.5" />,
-  DELETE: <Trash2 className="h-3.5 w-3.5" />,
-  BROADCAST: <Radio className="h-3.5 w-3.5" />,
-  REMINDER: <Bell className="h-3.5 w-3.5" />,
-  WA_LOGIN: <LogIn className="h-3.5 w-3.5" />,
-  WA_DISCONNECT: <LogOut className="h-3.5 w-3.5" />,
-};
 
 const actionColors: Record<string, string> = {
   CREATE: "bg-green-500/10 text-green-500",

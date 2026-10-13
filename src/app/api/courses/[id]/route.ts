@@ -11,7 +11,7 @@ export async function PUT(
     const { id } = await params;
     const userId = getUserIdFromRequest(request);
     const body = await request.json();
-    const { name, sks, semester, schedule, dosenName, dosenWa } = body;
+    const { name, sks, semester, schedule, scheduleDay, scheduleStart, scheduleEnd, dosenName, dosenWa } = body;
 
     const existing = await prisma.course.findUnique({ where: { id } });
     if (!existing || existing.userId !== userId) {
@@ -25,6 +25,9 @@ export async function PUT(
         sks: sks ? (isNaN(parseInt(sks)) ? null : parseInt(sks)) : null,
         semester: semester || null,
         schedule: schedule || null,
+        scheduleDay: scheduleDay || null,
+        scheduleStart: scheduleStart || null,
+        scheduleEnd: scheduleEnd || null,
         dosenName: dosenName || null,
         dosenWa: dosenWa || null,
       },

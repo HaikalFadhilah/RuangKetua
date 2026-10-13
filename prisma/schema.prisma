@@ -22,10 +22,15 @@ model User {
   semester   String?
   university String?  // <--- TAMBAHAN NAMA KAMPUS/UNIVERSITAS
   isSuspended Boolean @default(false)
-  
-  // ── SUBSCRIPTION / PAYWALL ──
+  resetToken      String?   @unique
+  resetTokenExpiry DateTime?
+  resetAttempts   Int       @default(0)
+  magicToken      String?   @unique
+  magicTokenExpiry DateTime?
+
+  // â”€â”€ SUBSCRIPTION / PAYWALL â”€â”€
   subscriptionPlan String? @default("trial") // "trial", "monthly", "halfyear", "yearly"
-  subscriptionEnd  DateTime? 
+  subscriptionEnd  DateTime?
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -53,6 +58,8 @@ model User {
   cloudAccounts CloudAccount[]
   cloudFiles    CloudFile[]
   classMembers  ClassMember[]
+  dosenReminders DosenReminder[]
+  autoReminders  AutoReminder[]
 
   @@map("users")
 }
@@ -86,6 +93,7 @@ model ForumPost {
   userId     String
   title      String
   content    String   @db.Text
+  attachments String? @db.Text // JSON array of {name, url, type, size}
   category   ForumCategory @default(PUBLIC) // Bisa PUBLIC atau INTERNAL_CAMPUS
   university String?  // Diisi nama universitas jika kategorinya internal_campus
   createdAt  DateTime @default(now())
@@ -104,6 +112,7 @@ model ForumComment {
   postId     String
   userId     String
   content    String   @db.Text
+  attachments String? @db.Text // JSON array of {name, url, type, size}
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -136,6 +145,12 @@ model UserSettings {
   driveUploadMode     String  @default("manual") // "manual" | "auto"
   allocationRrCursor  Int     @default(0)
   allocationSwrrState String? // JSON state for weighted round robin
+
+  // Notification preferences (granular)
+  notifyOverdue      Boolean @default(true)
+  notifyDeadline     Boolean @default(true)
+  notifyReminder     Boolean @default(true)
+  notifyAnnouncement Boolean @default(true)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -238,23 +253,87 @@ model ClassMember {
 // ==========================================
 
 model Course {
-  id        String   @id @default(cuid())
-  userId    String
-  name      String
-  sks       Int?
-  semester  String?
-  schedule  String?  @db.Text
-  dosenName String?
-  dosenWa   String?
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  sks          Int?
+  semester     String?
+  schedule     String?  @db.Text
+  scheduleDay  String?  // "senin","selasa","rabu","kamis","jumat","sabtu","minggu"
+  scheduleStart String? // "08:00"
+  scheduleEnd   String? // "10:00"
+  dosenName    String?
+  dosenWa      String?
+  createdAt    DateTime @default(now())
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tasks      Task[]
-  elearnings ELearning[]
-  materials  Material[]
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks          Task[]
+  elearnings     ELearning[]
+  materials      Material[]
+  dosenReminders DosenReminder[]
 
   @@index([userId])
   @@map("courses")
+}
+
+// ==========================================
+// DOSEN REMINDER (Auto WA H-1 sebelum jadwal)
+// ==========================================
+
+model DosenReminder {
+  id              String   @id @default(cuid())
+  userId          String
+  courseId         String
+  enabled         Boolean  @default(true)
+  reminderTime    String   @default("20:00") // Jam kirim reminder (HH:mm)
+  messageTemplate String?  @db.Text          // Template pesan custom, null = default
+  lastSentDate    String?                     // "2026-07-29" â€” prevent duplicate sends
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([enabled])
+  @@map("dosen_reminders")
+}
+
+// ==========================================
+// AUTO REMINDER (Unified class reminders)
+// ==========================================
+
+model AutoReminder {
+  id              String   @id @default(cuid())
+  userId          String
+  type            String   // "elearning" | "task_deadline" | "daily_schedule" | "absen" | "exam" | "weekly_report"
+  enabled         Boolean  @default(true)
+
+  // Timing config
+  reminderDays    String   @default("H-7,H-3,H-1") // kapan reminder dikirim (H-x sebelum deadline/exam)
+  reminderTime    String   @default("07:00")        // jam kirim (HH:mm WIB)
+
+  // Target
+  target          String   @default("group")        // "group" | "personal"
+
+  // Custom message template (null = default)
+  messageTemplate String?  @db.Text
+
+  // Tracking
+  lastTriggered   DateTime?
+  triggerCount    Int      @default(0)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([userId])
+  @@index([enabled])
+  @@index([type])
+  @@map("auto_reminders")
 }
 
 // ==========================================
@@ -461,22 +540,27 @@ model SystemSettings {
   appName          String   @default("Ruang Ketua")
   adminWhatsapp    String?  // Nomor WhatsApp admin (format kode negara + nomor, tanpa +) untuk bantuan pengguna
 
-  // ── PRICING ──────────────────────────────
+  // â”€â”€ PRICING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   priceMonthly     Int      @default(29000)
   priceHalfYear    Int      @default(149000)
   priceYearly      Int      @default(269000)
   pricingEnabled   Boolean  @default(true)
 
-  // ── PAKASIR PAYMENT GATEWAY ───────────────
+  // â”€â”€ PAKASIR PAYMENT GATEWAY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   pakasirApiKey    String?
   pakasirSlug      String?   // Project slug dari Pakasir dashboard
   pakasirSandbox   Boolean  @default(true)
   pakasirEnabled   Boolean  @default(false)
 
-  // ── GOOGLE DRIVE / CLOUD STORAGE ──────────
+  // â”€â”€ GOOGLE DRIVE / CLOUD STORAGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   googleClientId     String?  // OAuth Client ID dari Google Cloud Console
   googleClientSecret String?  // OAuth Client Secret
   driveTokenSecret   String?  // Kunci enkripsi token (AES-256). Bisa di-generate otomatis jika kosong.
+
+  // ── TEAM PHOTOS (landing page) ──
+  teamPhoto1        String?  // Photo URL for team member 1
+  teamPhoto2        String?  // Photo URL for team member 2
+  teamPhoto3        String?  // Photo URL for team member 3
 
   updatedAt        DateTime @updatedAt
 

@@ -11,53 +11,114 @@ export async function GET(request: NextRequest) {
     const tomorrowEnd = new Date(todayStart);
     tomorrowEnd.setDate(tomorrowEnd.getDate() + 2);
 
-    const [overdueTasks, upcomingTasks, pendingReminders, recentAnnouncements] = await Promise.all([
-      // Overdue tasks
-      prisma.task.findMany({
-        where: {
-          userId,
-          status: { not: "COMPLETED" },
-          deadline: { lt: now },
-        },
-        select: { id: true, title: true, deadline: true, priority: true },
-        orderBy: { deadline: "desc" },
-        take: 10,
-      }),
+    // Load user notification preferences
+    const settings = await prisma.userSettings.findUnique({
+      where: { userId },
+      select: {
+        notifyOverdue: true,
+        notifyDeadline: true,
+        notifyReminder: true,
+        notifyAnnouncement: true,
+      },
+    });
 
-      // Tasks due today/tomorrow
-      prisma.task.findMany({
-        where: {
-          userId,
-          status: { not: "COMPLETED" },
-          deadline: { gte: todayStart, lt: tomorrowEnd },
-        },
-        select: { id: true, title: true, deadline: true, priority: true },
-        orderBy: { deadline: "asc" },
-        take: 10,
-      }),
+    // Defaults to all true if no settings found
+    const prefs = {
+      notifyOverdue: settings?.notifyOverdue ?? true,
+      notifyDeadline: settings?.notifyDeadline ?? true,
+      notifyReminder: settings?.notifyReminder ?? true,
+      notifyAnnouncement: settings?.notifyAnnouncement ?? true,
+    };
 
-      // Pending reminders (not sent, remind time <= now or upcoming today)
-      prisma.reminder.findMany({
-        where: {
-          userId,
-          sent: false,
-          remindAt: { lte: tomorrowEnd },
-        },
-        select: { id: true, title: true, remindAt: true, type: true },
-        orderBy: { remindAt: "asc" },
-        take: 10,
-      }),
+    // Only query enabled notification types
+    const [
+      overdueTasks,
+      upcomingTasks,
+      pendingReminders,
+      recentAnnouncements,
+      upcomingElearnings,
+      upcomingCalendarEvents,
+    ] = await Promise.all([
+      prefs.notifyOverdue
+        ? prisma.task.findMany({
+            where: {
+              userId,
+              status: { not: "COMPLETED" },
+              deadline: { lt: now },
+            },
+            select: { id: true, title: true, deadline: true, priority: true },
+            orderBy: { deadline: "desc" },
+            take: 10,
+          })
+        : [],
 
-      // Recent announcements (last 7 days)
-      prisma.announcement.findMany({
-        where: {
-          userId,
-          createdAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
-        },
-        select: { id: true, title: true, category: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-      }),
+      prefs.notifyDeadline
+        ? prisma.task.findMany({
+            where: {
+              userId,
+              status: { not: "COMPLETED" },
+              deadline: { gte: todayStart, lt: tomorrowEnd },
+            },
+            select: { id: true, title: true, deadline: true, priority: true },
+            orderBy: { deadline: "asc" },
+            take: 10,
+          })
+        : [],
+
+      prefs.notifyReminder
+        ? prisma.reminder.findMany({
+            where: {
+              userId,
+              sent: false,
+              remindAt: { lte: tomorrowEnd },
+            },
+            select: { id: true, title: true, remindAt: true, type: true },
+            orderBy: { remindAt: "asc" },
+            take: 10,
+          })
+        : [],
+
+      prefs.notifyAnnouncement
+        ? prisma.announcement.findMany({
+            where: {
+              userId,
+              createdAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
+            },
+            select: { id: true, title: true, category: true, createdAt: true },
+            orderBy: { createdAt: "desc" },
+            take: 5,
+          })
+        : [],
+
+      prefs.notifyDeadline
+        ? prisma.eLearning.findMany({
+            where: {
+              course: { userId },
+              isActive: true,
+              endDate: { gte: todayStart, lt: tomorrowEnd },
+            },
+            select: {
+              id: true,
+              title: true,
+              endDate: true,
+              course: { select: { name: true } },
+            },
+            orderBy: { endDate: "asc" },
+            take: 10,
+          })
+        : [],
+
+      prefs.notifyReminder
+        ? prisma.calendarEvent.findMany({
+            where: {
+              userId,
+              startDate: { gte: todayStart, lt: tomorrowEnd },
+            },
+            select: { id: true, title: true, startDate: true, type: true },
+            orderBy: { startDate: "asc" },
+            take: 10,
+          })
+        : [],
     ]);
 
     // Build notification items
@@ -70,6 +131,7 @@ export async function GET(request: NextRequest) {
         priority: t.priority,
         entityId: t.id,
         entityType: "task" as const,
+        href: `/tasks/${t.id}`,
         time: t.deadline?.toISOString() || now.toISOString(),
       })),
       ...upcomingTasks.map((t) => ({
@@ -84,6 +146,7 @@ export async function GET(request: NextRequest) {
         priority: t.priority,
         entityId: t.id,
         entityType: "task" as const,
+        href: `/tasks/${t.id}`,
         time: t.deadline?.toISOString() || now.toISOString(),
       })),
       ...pendingReminders.map((r) => ({
@@ -94,6 +157,12 @@ export async function GET(request: NextRequest) {
         priority: null,
         entityId: r.id,
         entityType: "reminder" as const,
+        href:
+          r.type === "ELEARNING"
+            ? "/elearning"
+            : r.type === "EXAM"
+              ? "/calendar"
+              : "/reminders",
         time: r.remindAt.toISOString(),
       })),
       ...recentAnnouncements.map((a) => ({
@@ -104,13 +173,42 @@ export async function GET(request: NextRequest) {
         priority: null,
         entityId: a.id,
         entityType: "announcement" as const,
+        href: "/announcements",
         time: a.createdAt.toISOString(),
+      })),
+      ...upcomingElearnings.map((e) => ({
+        id: `elearning-${e.id}`,
+        type: "deadline" as const,
+        title: e.title,
+        description: `E-Learning ${e.course.name}`,
+        priority: null,
+        entityId: e.id,
+        entityType: "elearning" as const,
+        href: "/elearning",
+        time: e.endDate.toISOString(),
+      })),
+      ...upcomingCalendarEvents.map((event) => ({
+        id: `calendar-${event.id}`,
+        type: "reminder" as const,
+        title: event.title,
+        description: `Jadwal ${event.type.toLowerCase()}`,
+        priority: null,
+        entityId: event.id,
+        entityType: "calendar" as const,
+        href: "/calendar",
+        time: event.startDate.toISOString(),
       })),
     ];
 
-    const count = overdueTasks.length + upcomingTasks.length + pendingReminders.length;
+    const count =
+      overdueTasks.length +
+      upcomingTasks.length +
+      pendingReminders.length +
+      (Array.isArray(recentAnnouncements) ? recentAnnouncements.length : 0) +
+      (Array.isArray(upcomingElearnings) ? upcomingElearnings.length : 0) +
+      (Array.isArray(upcomingCalendarEvents) ? upcomingCalendarEvents.length : 0);
 
-    return successResponse({ notifications, count });
+    return successResponse({ notifications, count, preferences: prefs });
   } catch (error) {
     console.error("Notifications GET error:", error);
     return errorResponse("Gagal mengambil notifikasi", 500);

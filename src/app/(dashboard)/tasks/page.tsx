@@ -22,7 +22,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Plus,
   Search,
-  Filter,
   Trash2,
   Edit3,
   Calendar,
@@ -105,7 +104,12 @@ export default function TasksPage() {
       title: task.title,
       description: task.description || "",
       courseId: task.course?.id || "",
-      deadline: task.deadline ? new Date(task.deadline).toISOString().slice(0, 16) : "",
+      deadline: task.deadline ? (() => {
+        // Convert UTC to WIB (UTC+7) for datetime-local input
+        const utc = new Date(task.deadline as string);
+        const wib = new Date(utc.getTime() + 7 * 60 * 60 * 1000);
+        return wib.toISOString().slice(0, 16);
+      })() : "",
       priority: task.priority,
       status: task.status,
     });

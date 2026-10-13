@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse, paginatedResponse, getPaginationParams } from "@/lib/api-response";
 import { getUserIdFromRequest } from "@/lib/api-utils";
+import { logActivity } from "@/lib/activity";
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,6 +55,14 @@ export async function POST(request: NextRequest) {
         reminders: reminders || "H-7,H-3,H-1,H-0",
       },
       include: { course: { select: { id: true, name: true, sks: true } } },
+    });
+
+    await logActivity({
+      userId,
+      action: "CREATE",
+      entity: "elearning",
+      entityId: elearning.id,
+      description: `Menambahkan e-learning: ${elearning.title}`,
     });
 
     return successResponse(elearning, "E-Learning berhasil ditambahkan", 201);

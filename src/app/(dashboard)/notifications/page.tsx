@@ -27,7 +27,8 @@ interface Notification {
   description: string;
   priority: string | null;
   entityId: string;
-  entityType: "task" | "reminder" | "announcement";
+  entityType: "task" | "reminder" | "announcement" | "elearning" | "calendar";
+  href: string;
   time: string;
 }
 
@@ -107,9 +108,7 @@ export default function NotificationsPage() {
   }, [fetchNotifications]);
 
   const handleClick = (notif: Notification) => {
-    if (notif.entityType === "task") router.push(`/tasks/${notif.entityId}`);
-    else if (notif.entityType === "announcement") router.push("/announcements");
-    else router.push("/calendar");
+    router.push(notif.href);
   };
 
   const filterMap: Record<Filter, Notification["type"] | null> = {

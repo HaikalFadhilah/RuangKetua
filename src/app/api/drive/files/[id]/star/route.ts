@@ -30,7 +30,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const next = typeof body.starred === "boolean" ? body.starred : !mirror?.isStarred;
 
     const adapter = new GoogleDriveAdapter(account);
-    const res = await adapter.setFileStarred(id, next);
+    await adapter.setFileStarred(id, next);
     await prisma.cloudFile.updateMany({
       where: { remoteFileId: id },
       data: { isStarred: next },

@@ -26,7 +26,7 @@ export async function PUT(request: NextRequest) {
   try {
     const userId = getUserIdFromRequest(request);
     const body = await request.json();
-    const { name, className, semester, university, theme, reminderDefault, aiModel, language } = body;
+    const { name, className, semester, university, theme, reminderDefault, aiModel, language, notifyOverdue, notifyDeadline, notifyReminder, notifyAnnouncement } = body;
 
     // Update user profile
     if (name || className !== undefined || semester !== undefined || university !== undefined) {
@@ -35,14 +35,20 @@ export async function PUT(request: NextRequest) {
         data: {
           name: name || undefined,
           className: className !== undefined ? className : undefined,
-          semester: semester !== undefined ? String(semester) : undefined,
+          semester: semester !== undefined ? (semester != null ? String(semester) : null) : undefined,
           university: university !== undefined ? university : undefined,
         },
       });
     }
 
     // Update settings
-    if (theme || reminderDefault || aiModel || language) {
+    if (theme || reminderDefault || aiModel || language || notifyOverdue !== undefined || notifyDeadline !== undefined || notifyReminder !== undefined || notifyAnnouncement !== undefined) {
+      const notifUpdate: Record<string, boolean> = {};
+      if (notifyOverdue !== undefined) notifUpdate.notifyOverdue = notifyOverdue;
+      if (notifyDeadline !== undefined) notifUpdate.notifyDeadline = notifyDeadline;
+      if (notifyReminder !== undefined) notifUpdate.notifyReminder = notifyReminder;
+      if (notifyAnnouncement !== undefined) notifUpdate.notifyAnnouncement = notifyAnnouncement;
+
       await prisma.userSettings.upsert({
         where: { userId },
         create: {
@@ -51,12 +57,14 @@ export async function PUT(request: NextRequest) {
           reminderDefault: reminderDefault || "H-3",
           aiModel: aiModel || "llama-3.3-70b-versatile",
           language: language || "id",
+          ...notifUpdate,
         },
         update: {
           theme: theme || undefined,
           reminderDefault: reminderDefault || undefined,
           aiModel: aiModel || undefined,
           language: language || undefined,
+          ...notifUpdate,
         },
       });
     }

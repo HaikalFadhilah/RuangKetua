@@ -16,7 +16,6 @@ import {
   BarChart3,
   Bot,
   ScanText,
-  Share2,
   StickyNote,
   Activity,
   Settings,
@@ -33,6 +32,7 @@ import {
   ShieldCheck,
   Sheet,
   Users,
+  AlarmClock,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuthStore } from "@/store";
@@ -43,7 +43,7 @@ interface CommandItem {
   descriptionKey?: string;
   icon: React.ElementType;
   action: () => void;
-  category: "navigate" | "action";
+  category: string;
   keywords: string[];
 }
 
@@ -67,6 +67,7 @@ export function CommandPalette() {
     { id: "dashboard", labelKey: "nav.dashboard", descriptionKey: "cmd.item.dashboardDesc", icon: LayoutDashboard, action: () => nav("/dashboard"), category: "navigate", keywords: ["home", "beranda", "utama"] },
     { id: "tasks", labelKey: "nav.tasks", descriptionKey: "cmd.item.tasksDesc", icon: ListTodo, action: () => nav("/tasks"), category: "navigate", keywords: ["tugas", "todo", "assignment"] },
     { id: "calendar", labelKey: "nav.calendar", descriptionKey: "cmd.item.calendarDesc", icon: CalendarDays, action: () => nav("/calendar"), category: "navigate", keywords: ["jadwal", "schedule", "tanggal"] },
+    { id: "reminders", labelKey: "nav.reminders", descriptionKey: "cmd.item.remindersDesc", icon: AlarmClock, action: () => nav("/reminders"), category: "navigate", keywords: ["reminder", "otomatis", "pengingat"] },
     { id: "courses", labelKey: "nav.courses", descriptionKey: "cmd.item.coursesDesc", icon: GraduationCap, action: () => nav("/courses"), category: "navigate", keywords: ["matkul", "mata kuliah", "dosen"] },
     { id: "elearning", labelKey: "nav.elearning", descriptionKey: "cmd.item.elearningDesc", icon: BookOpen, action: () => nav("/elearning"), category: "navigate", keywords: ["kuliah", "online", "lms"] },
     { id: "repository", labelKey: "nav.repository", descriptionKey: "cmd.item.repositoryDesc", icon: FolderOpen, action: () => nav("/repository"), category: "navigate", keywords: ["file", "materi", "dokumen"] },

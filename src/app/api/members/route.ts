@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getUserIdFromRequest } from "@/lib/api-utils";
+import { logActivity } from "@/lib/activity";
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,7 +46,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return successResponse(newMember, "Anggota berhasil ditambahkan", 201);
+    await logActivity({
+      userId,
+      action: "CREATE",
+      entity: "member",
+      entityId: newMember.id,
+      description: `Menambahkan anggota kelas: ${newMember.name}`,
+    });
+
+    return successResponse(newMember, undefined, 201);
   } catch (error: any) {
     console.error("POST /api/members error:", error);
     return errorResponse(error.message || "Internal server error", 500);
@@ -78,7 +87,15 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    return successResponse(updatedMember, "Anggota berhasil diperbarui");
+    await logActivity({
+      userId,
+      action: "UPDATE",
+      entity: "member",
+      entityId: updatedMember.id,
+      description: `Mengupdate anggota kelas: ${updatedMember.name}`,
+    });
+
+    return successResponse(updatedMember, undefined, 200);
   } catch (error: any) {
     console.error("PUT /api/members error:", error);
     return errorResponse(error.message || "Internal server error", 500);
@@ -99,13 +116,28 @@ export async function DELETE(request: NextRequest) {
       await prisma.classMember.deleteMany({
         where: { userId, id: { in: ids } },
       });
+      await logActivity({
+        userId,
+        action: "DELETE",
+        entity: "member",
+        description: `Menghapus ${ids.length} anggota kelas`,
+        metadata: JSON.stringify({ ids }),
+      });
       return successResponse({ deleted: ids.length });
     }
 
     if (!id) return errorResponse("ID is required", 400);
 
-    await prisma.classMember.delete({
+    const deletedMember = await prisma.classMember.delete({
       where: { id, userId },
+    });
+
+    await logActivity({
+      userId,
+      action: "DELETE",
+      entity: "member",
+      entityId: id,
+      description: `Menghapus anggota kelas: ${deletedMember.name}`,
     });
 
     return successResponse({ deleted: 1 });

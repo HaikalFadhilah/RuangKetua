@@ -39,13 +39,29 @@ export interface CloudConfig {
   redirectUri: string;
 }
 
+function resolveTokenSecret(settingsSecret: string | null | undefined): string {
+  const secret =
+    settingsSecret?.trim() ||
+    process.env.DRIVE_TOKEN_SECRET?.trim() ||
+    process.env.JWT_SECRET?.trim();
+
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("DRIVE_TOKEN_SECRET atau JWT_SECRET wajib diisi untuk Google Drive");
+    }
+    return "dev-insecure-fallback-secret";
+  }
+
+  return secret;
+}
+
 export async function getCloudConfig(): Promise<CloudConfig> {
   const s = await getSystemSettings();
   const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   return {
     clientId: (s.googleClientId || process.env.GOOGLE_CLIENT_ID || "").trim(),
     clientSecret: (s.googleClientSecret || process.env.GOOGLE_CLIENT_SECRET || "").trim(),
-    tokenSecret: (s.driveTokenSecret || process.env.DRIVE_TOKEN_SECRET || process.env.JWT_SECRET || "dev-insecure-fallback-secret").trim(),
+    tokenSecret: resolveTokenSecret(s.driveTokenSecret),
     redirectUri: (process.env.GOOGLE_REDIRECT_URI || `${base}/api/cloud/google/callback`).trim(),
   };
 }
@@ -95,7 +111,7 @@ export async function completeGoogleAccountLink({ code, state }: { code: string;
     tokenType: tokens.token_type || null,
   };
 
-  const encrypted = encryptJson(credentials);
+  const encrypted = encryptJson(credentials, cfg.tokenSecret);
   const email = user.emailAddress as string;
   const total = String(quota.limit || "0");
   const used = String(quota.usage || "0");
@@ -127,8 +143,9 @@ export async function completeGoogleAccountLink({ code, state }: { code: string;
 export class GoogleDriveAdapter {
   constructor(private account: { encryptedCredentials: string; email?: string | null }) {}
 
-  private createOAuthClient() {
-    const creds = decryptJson<DriveCredentials>(this.account.encryptedCredentials);
+  private async createOAuthClient() {
+    const cfg = await getCloudConfig();
+    const creds = decryptJson<DriveCredentials>(this.account.encryptedCredentials, cfg.tokenSecret);
     const client = new google.auth.OAuth2(creds.clientId, creds.clientSecret, creds.redirectUri);
     client.setCredentials({
       refresh_token: creds.refreshToken || undefined,
@@ -141,11 +158,11 @@ export class GoogleDriveAdapter {
   }
 
   private async getDriveClient() {
-    return google.drive({ version: "v3", auth: this.createOAuthClient() });
+    return google.drive({ version: "v3", auth: await this.createOAuthClient() });
   }
 
   private async getSheetsClient() {
-    return google.sheets({ version: "v4", auth: this.createOAuthClient() });
+    return google.sheets({ version: "v4", auth: await this.createOAuthClient() });
   }
 
   async getStorageSummary() {
@@ -201,7 +218,7 @@ export class GoogleDriveAdapter {
    * Membuat Resumable Upload Session URL untuk direct upload dari browser (Bypass VPS RAM)
    */
   async createResumableSession({ fileName, mimeType, fileSize, parentId }: { fileName: string; mimeType: string; fileSize: number; parentId?: string }) {
-    const oauth2Client = this.createOAuthClient();
+    const oauth2Client = await this.createOAuthClient();
     const token = await oauth2Client.getAccessToken();
     if (!token.token) throw new Error("Gagal mendapatkan Access Token untuk Resumable Upload");
 

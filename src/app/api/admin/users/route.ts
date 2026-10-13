@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { successResponse, errorResponse, paginatedResponse } from "@/lib/api-response";
-import { getUserIdFromRequest } from "@/lib/api-utils";
 
 export async function POST(request: NextRequest) {
   try {

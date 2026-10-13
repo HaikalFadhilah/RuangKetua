@@ -1,8 +1,18 @@
-const http = require("http");
+import http from "node:http";
+
+const email = process.env.ADMIN_EMAIL || "admin@ruangketua.id";
+const passwords = (process.env.DEBUG_LOGIN_PASSWORDS || process.env.ADMIN_PASSWORD || "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+if (passwords.length === 0) {
+  throw new Error("Set ADMIN_PASSWORD atau DEBUG_LOGIN_PASSWORDS sebelum menjalankan debug-login.mjs.");
+}
 
 async function tryLogin(password) {
   return new Promise((resolve) => {
-    const body = JSON.stringify({ email: "admin@ruangketua.my.id", password });
+    const body = JSON.stringify({ email, password });
     const options = {
       hostname: "localhost", port: 3000,
       path: "/api/admin/auth", method: "POST",
@@ -19,7 +29,6 @@ async function tryLogin(password) {
   });
 }
 
-const passwords = ["admin", "admin123", "password", "123456", "ruangketua", "Admin123", "admin@123", "ketuakelas", "admin1234", "admin@ruangketua"];
 for (const pw of passwords) {
   const r = await tryLogin(pw);
   console.log(`[${pw}] -> ${r.status} ${r.body.substring(0, 60)}`);

@@ -15,15 +15,12 @@ const FOOTER_COLUMNS = [
     title: "Perusahaan",
     links: [
       { label: "Tentang Kami", href: "/tentang-kami" },
-      { label: "Blog", href: "/blog" },
-      { label: "Kontak", href: "/kontak" },
     ],
   },
   {
     title: "Legal",
     links: [
       { label: "Syarat & Ketentuan", href: "/syarat-ketentuan" },
-      { label: "Kebijakan Privasi", href: "/kebijakan-privasi" },
       { label: "Kebijakan Cookie", href: "/kebijakan-cookie" },
       { label: "Lisensi", href: "/lisensi" },
     ],

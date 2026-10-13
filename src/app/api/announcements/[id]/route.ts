@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { getUserIdFromRequest } from "@/lib/api-utils";
+import { logActivity } from "@/lib/activity";
 
 export async function PUT(
   request: NextRequest,
@@ -24,6 +25,14 @@ export async function PUT(
         pinned: body.pinned !== undefined ? body.pinned : undefined,
         broadcast: body.broadcast !== undefined ? body.broadcast : undefined,
       },
+    });
+
+    await logActivity({
+      userId,
+      action: "UPDATE",
+      entity: "announcement",
+      entityId: announcement.id,
+      description: `Mengupdate pengumuman: ${announcement.title}`,
     });
 
     return successResponse(announcement, "Pengumuman berhasil diupdate");

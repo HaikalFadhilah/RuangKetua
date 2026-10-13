@@ -1,7 +1,8 @@
-import { NextRequest } from "next/server";
+﻿import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse, paginatedResponse, getPaginationParams } from "@/lib/api-response";
 import { getUserIdFromRequest } from "@/lib/api-utils";
+import { getWhatsAppService } from "@/lib/whatsapp/service";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const category = searchParams.get("category") || "";
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const where: any = { userId };
     if (search) {
       where.OR = [
@@ -68,7 +69,43 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return successResponse(announcement, "Pengumuman berhasil dibuat", 201);
+    const broadcastResult: { requested: boolean; sent: boolean; error?: string } = {
+      requested: Boolean(broadcast),
+      sent: false,
+    };
+
+    if (broadcast) {
+      try {
+        const session = await prisma.whatsAppSession.findUnique({ where: { userId } });
+        if (!session?.groupId) {
+          broadcastResult.error = "Pilih grup WhatsApp utama terlebih dahulu";
+        } else {
+          const waService = getWhatsAppService(userId);
+          if (!(await waService.ensureConnected())) {
+            broadcastResult.error = "WhatsApp tidak terhubung";
+          } else {
+            const message = `*${announcement.title}*\n\n${announcement.content}`;
+            broadcastResult.sent = await waService.broadcastToGroup(session.groupId, message);
+
+            if (broadcastResult.sent) {
+              await prisma.activityLog.create({
+                data: {
+                  userId,
+                  action: "BROADCAST",
+                  entity: "announcement",
+                  entityId: announcement.id,
+                  description: `Broadcast pengumuman ke ${session.groupName || "grup utama"}: ${announcement.title}`,
+                },
+              });
+            }
+          }
+        }
+      } catch (error) {
+        broadcastResult.error = error instanceof Error ? error.message : "Broadcast gagal";
+      }
+    }
+
+    return successResponse({ ...announcement, _broadcast: broadcastResult }, "Pengumuman berhasil dibuat", 201);
   } catch (error) {
     console.error("Announcements POST error:", error);
     return errorResponse("Gagal membuat pengumuman", 500);

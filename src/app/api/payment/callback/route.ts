@@ -9,7 +9,7 @@ const PAKASIR_BASE = "https://app.pakasir.com";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { order_id, status, amount, project } = body;
+    const { order_id, status, amount } = body;
 
     if (!order_id || !status) {
       return NextResponse.json({ success: false, error: "Payload tidak valid" }, { status: 400 });

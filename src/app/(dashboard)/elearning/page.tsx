@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, BookOpen, Clock, AlertCircle, Edit3, Trash2, Loader2, Bell } from "lucide-react";
-import { formatDate, formatRelativeTime } from "@/lib/utils";
-import { REMINDER_OPTIONS } from "@/config/constants";
+import { formatDate } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 
 interface ELearningItem {

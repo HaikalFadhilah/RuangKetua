@@ -1,4 +1,34 @@
+import prisma from "@/lib/prisma";
+
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+// Model default Groq. llama-3.3-70b-versatile & llama-4-scout-17b sudah di-retire
+// (Groq balas 404 "model does not exist"), jadi jangan dipakai lagi.
+// openai/gpt-oss-120b JANGAN dipakai: itu reasoning model, message.content dikosongkan
+// dan isinya pindah ke field `reasoning` (meta-commentary) -> chat balasan kosong.
+export const DEFAULT_TEXT_MODEL = "qwen/qwen3.8-27b";
+export const DEFAULT_VISION_MODEL = "qwen/qwen3.8-27b";
+
+// Prioritas: argumen eksplisit > env > System Settings (DB).
+// Tanpa fallback DB, key yang di-set lewat UI admin diabaikan dan AI selalu 500.
+let dbKeyCache: string | null | undefined;
+
+async function resolveApiKey(explicit?: string): Promise<string | undefined> {
+  if (explicit) return explicit;
+  if (process.env.GROQ_API_KEY) return process.env.GROQ_API_KEY;
+
+  if (dbKeyCache === undefined) {
+    try {
+      const settings = await prisma.systemSettings.findFirst({
+        select: { groqApiKey: true },
+      });
+      dbKeyCache = settings?.groqApiKey ?? null;
+    } catch {
+      dbKeyCache = null;
+    }
+  }
+  return dbKeyCache ?? undefined;
+}
 
 export interface AIRequestOptions {
   systemPrompt: string;
@@ -6,11 +36,12 @@ export interface AIRequestOptions {
   model?: string;
   maxTokens?: number;
   temperature?: number;
+  apiKey?: string;
 }
 
 export async function callAI(options: AIRequestOptions): Promise<string> {
-  const apiKey = process.env.GROQ_API_KEY;
-  const model = options.model || process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+  const apiKey = await resolveApiKey(options.apiKey);
+  const model = options.model || process.env.GROQ_MODEL || DEFAULT_TEXT_MODEL;
 
   if (!apiKey || apiKey === "your-groq-api-key") {
     throw new Error("API Key AI belum dikonfigurasi.");
@@ -48,12 +79,13 @@ export async function callAIWithHistory(
   systemPrompt: string,
   history: { role: string; content: string }[],
   userMessage: string,
-  model?: string
+  model?: string,
+  apiKey?: string
 ): Promise<string> {
-  const apiKey = process.env.GROQ_API_KEY;
-  const modelName = model || process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+  const key = await resolveApiKey(apiKey);
+  const modelName = model || process.env.GROQ_MODEL || DEFAULT_TEXT_MODEL;
 
-  if (!apiKey || apiKey === "your-groq-api-key") {
+  if (!key || key === "your-groq-api-key") {
     throw new Error("API Key AI belum dikonfigurasi.");
   }
 
@@ -70,7 +102,7 @@ export async function callAIWithHistory(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
       model: modelName,
@@ -96,11 +128,12 @@ export interface AIVisionOptions {
   model?: string;
   maxTokens?: number;
   temperature?: number;
+  apiKey?: string;
 }
 
 export async function callAIVision(options: AIVisionOptions): Promise<string> {
-  const apiKey = process.env.GROQ_API_KEY;
-  const model = options.model || "meta-llama/llama-4-scout-17b-16e-instruct";
+  const apiKey = await resolveApiKey(options.apiKey);
+  const model = options.model || process.env.GROQ_VISION_MODEL || DEFAULT_VISION_MODEL;
 
   if (!apiKey || apiKey === "your-groq-api-key") {
     throw new Error("API Key AI belum dikonfigurasi.");

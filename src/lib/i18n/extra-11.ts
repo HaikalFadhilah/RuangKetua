@@ -73,6 +73,10 @@ export const extra11: Record<Locale, Record<string, string>> = {
     "broadcast.history": "Riwayat Broadcast",
     "broadcast.received": "Diterima {count} grup",
     "broadcast.general": "Umum",
+    "broadcast.dailySchedule": "Jadwal Per Hari",
+    "broadcast.selectDay": "Pilih hari...",
+    "broadcast.noCourseOnDay": "Tidak ada matkul di hari {day}",
+    "broadcast.courseCount": "{count} matkul ditemukan",
 
     // ── Notes ──
     "notes.fetchError": "Gagal memuat catatan",
@@ -243,6 +247,10 @@ export const extra11: Record<Locale, Record<string, string>> = {
     "broadcast.history": "Broadcast History",
     "broadcast.received": "Received by {count} groups",
     "broadcast.general": "General",
+    "broadcast.dailySchedule": "Daily Schedule",
+    "broadcast.selectDay": "Select day...",
+    "broadcast.noCourseOnDay": "No courses on {day}",
+    "broadcast.courseCount": "{count} courses found",
 
     // ── Notes ──
     "notes.fetchError": "Failed to load notes",

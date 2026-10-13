@@ -12,13 +12,8 @@ export default async function DashboardLayout({
   const userId = hdrs.get("x-user-id");
   const role = hdrs.get("x-user-role");
 
-  // Redirect ke login kalo ga ada userId (bypass middleware)
-  if (!userId) {
-    redirect("/login");
-  }
-
   // Admin bebas akses (tidak di-lock paywall)
-  if (role !== "admin") {
+  if (userId && role !== "admin" && role !== "super_admin") {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { subscriptionEnd: true, subscriptionPlan: true },

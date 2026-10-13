@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   try {
     const userId = getUserIdFromRequest(request);
     const body = await request.json();
-    const { name, sks, semester, schedule, dosenName, dosenWa } = body;
+    const { name, sks, semester, schedule, scheduleDay, scheduleStart, scheduleEnd, dosenName, dosenWa } = body;
 
     if (!name) {
       return errorResponse("Nama mata kuliah wajib diisi", 400);
@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
         sks: sks ? (isNaN(parseInt(sks)) ? null : parseInt(sks)) : null,
         semester: semester || null,
         schedule: schedule || null,
+        scheduleDay: scheduleDay || null,
+        scheduleStart: scheduleStart || null,
+        scheduleEnd: scheduleEnd || null,
         dosenName: dosenName || null,
         dosenWa: dosenWa || null,
       },

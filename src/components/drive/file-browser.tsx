@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -53,7 +53,6 @@ import {
   FileArchive,
   HardDrive,
   MoreHorizontal,
-  Link as LinkIcon,
   Copy,
   Check,
   Share2,
@@ -143,7 +142,6 @@ export default function FileBrowser() {
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [creatingFolder, setCreatingFolder] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [renameTarget, setRenameTarget] = useState<DriveFile | null>(null);
   const [renameName, setRenameName] = useState("");
   const [renaming, setRenaming] = useState(false);
@@ -159,7 +157,7 @@ export default function FileBrowser() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  // Spreadsheet Template state — removed (moved to /spreadsheets page)
+  // Spreadsheet Template state â€” removed (moved to /spreadsheets page)
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const didInitialSync = useRef(false);
@@ -199,7 +197,7 @@ export default function FileBrowser() {
       else toast.error(data.error || t("drive.loadFilesFailed"));
     } catch { toast.error(t("drive.loadFilesFailed")); }
     finally { setFilesLoading(false); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [selectedAccountId, effectiveView, folderStack, search, t]);
 
   const doSync = useCallback(async () => {
@@ -213,14 +211,14 @@ export default function FileBrowser() {
     finally { setSyncing(false); }
   }, [fetchAccounts, loadFiles, t]);
 
-  // Constant-length [loadFiles] dep — avoids HMR size-change error
+  // Constant-length [loadFiles] dep â€” avoids HMR size-change error
   useEffect(() => {
     if (!selectedAccountId) return;
     const acc = accounts.find((a) => a.id === selectedAccountId);
     if (acc && !acc.lastSyncedAt && !didInitialSync.current) {
       didInitialSync.current = true; doSync();
     } else { loadFiles(); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [loadFiles]);
 
   const selectAccount = (id: string) => {
@@ -231,9 +229,9 @@ export default function FileBrowser() {
   };
   const openFolder = (f: DriveFile) => { setFolderStack((s) => [...s, { id: f.id, name: f.name }]); setSelected(new Set()); };
   const goToFolder = (i: number) => { setFolderStack((s) => s.slice(0, i + 1)); setSelected(new Set()); };
-  const openItem = (f: DriveFile) => { 
+  const openItem = (f: DriveFile) => {
     if (f.isFolder) {
-      openFolder(f); 
+      openFolder(f);
     } else {
       setPreviewTarget(f);
     }
@@ -249,7 +247,7 @@ export default function FileBrowser() {
 
       for (let i = 0; i < fileList.length; i++) {
         const file = fileList[i];
-        
+
         // 1. Minta tiket (Session URL) dari server kita
         const sessionRes = await fetch("/api/drive/upload-session", {
           method: "POST",
@@ -263,7 +261,7 @@ export default function FileBrowser() {
             auto: false
           })
         });
-        
+
         const sessionData = await sessionRes.json();
         if (!sessionData.success) throw new Error(sessionData.error);
         const { sessionUri, accountId: targetAccountId } = sessionData.data;
@@ -295,13 +293,13 @@ export default function FileBrowser() {
         if (!confirmData.success) throw new Error(confirmData.error);
       }
 
-      toast.success(t("drive.uploadSuccess")); 
+      toast.success(t("drive.uploadSuccess"));
       loadFiles();
-    } catch (err) { 
-      toast.error(err instanceof Error ? err.message : t("drive.uploadFailed")); 
-    } finally { 
-      setUploading(false); 
-      if (fileInputRef.current) fileInputRef.current.value = ""; 
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("drive.uploadFailed"));
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -327,7 +325,7 @@ export default function FileBrowser() {
     const fileIdToDelete = confirmDelete.id;
     const accountId = selectedAccountId;
 
-    // 1. Hapus file dari list dulu, LALU tutup dialog — biar animasi dialog
+    // 1. Hapus file dari list dulu, LALU tutup dialog â€” biar animasi dialog
     //    tidak blocking render list yang sudah bersih
     setFiles(prev => prev.filter(f => f.id !== fileIdToDelete));
     requestAnimationFrame(() => setConfirmDelete(null));
@@ -372,11 +370,11 @@ export default function FileBrowser() {
     } catch (err) { toast.error(err instanceof Error ? err.message : t("drive.starFailed")); }
   };
 
-  // Share link — use local app API with short dbId
+  // Share link â€” use local app API with short dbId
   const handleShare = async (f: DriveFile) => {
     setGeneratingLink(true);
     setShareTarget(f);
-    
+
     try {
       const res = await fetch("/api/drive/share/generate", {
         method: "POST",
@@ -384,7 +382,7 @@ export default function FileBrowser() {
         body: JSON.stringify({ dbId: f.dbId })
       });
       const data = await res.json();
-      
+
       if (!data.success) {
         throw new Error(data.error || t("drive.shareFailed"));
       }
@@ -409,7 +407,7 @@ export default function FileBrowser() {
 
   const shareToChat = () => {
     if (!shareTarget || !shareLink) return;
-    const msg = encodeURIComponent(`📎 ${shareTarget.name}\n${shareLink}`);
+    const msg = encodeURIComponent(`ðŸ“Ž ${shareTarget.name}\n${shareLink}`);
     window.open(`/whatsapp?prefill=${msg}`, "_blank");
   };
 
@@ -419,7 +417,7 @@ export default function FileBrowser() {
   const isAllSelected = files.length > 0 && files.every((f) => selected.has(f.id));
   const toggleSelectAll = () => setSelected((prev) => files.length > 0 && files.every((f) => prev.has(f.id)) ? new Set() : new Set(files.map((f) => f.id)));
 
-  // ── Context menu (3-dot) items ──
+  // â”€â”€ Context menu (3-dot) items â”€â”€
   const FileMenu = ({ f }: { f: DriveFile }) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -505,12 +503,12 @@ export default function FileBrowser() {
   return (
     <div className="space-y-5">
 
-      {/* ── Loading ── */}
+      {/* â”€â”€ Loading â”€â”€ */}
       {accountsLoading && (
         <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
       )}
 
-      {/* ── No account ── */}
+      {/* â”€â”€ No account â”€â”€ */}
       {!accountsLoading && accounts.length === 0 && (
         <Card className="rounded-2xl border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-20 text-center gap-4">
@@ -528,10 +526,10 @@ export default function FileBrowser() {
         </Card>
       )}
 
-      {/* ── Main UI ── */}
+      {/* â”€â”€ Main UI â”€â”€ */}
       {!accountsLoading && accounts.length > 0 && (
         <>
-          {/* Toolbar — single clean row */}
+          {/* Toolbar â€” single clean row */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Account selector */}
             {accounts.length > 1 && (
@@ -558,8 +556,8 @@ export default function FileBrowser() {
             </div>
 
             {/* Filters */}
-            <Tabs 
-              value={search ? "" : filterView} 
+            <Tabs
+              value={search ? "" : filterView}
               onValueChange={(v) => { if (v) { setFilterView(v as FilterView); setSearch(""); } }}
             >
               <TabsList className="h-9">
@@ -633,7 +631,7 @@ export default function FileBrowser() {
               <Button variant="ghost" size="sm" className="gap-1.5 ml-2 h-8" onClick={() => selected.forEach((id) => { const f = files.find((x) => x.id === id); if (f) downloadFile(f); })}>
                 <Download className="h-3.5 w-3.5" /> {t("drive.download")}
               </Button>
-              <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-red-500 hover:bg-red-500/10 hover:text-red-500" onClick={() => { /* bulk delete – reuse single delete loop */ }}>
+              <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-red-500 hover:bg-red-500/10 hover:text-red-500" onClick={() => { /* bulk delete â€“ reuse single delete loop */ }}>
                 <Trash2 className="h-3.5 w-3.5" /> {t("action.delete")}
               </Button>
               <Button variant="ghost" size="sm" className="h-8 ml-auto text-muted-foreground" onClick={() => setSelected(new Set())}>
@@ -655,7 +653,7 @@ export default function FileBrowser() {
               </p>
             </div>
           ) : viewMode === "grid" ? (
-            /* ── Grid ── */
+            /* â”€â”€ Grid â”€â”€ */
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {files.map((f) => (
                 <FileContextMenu key={f.id} f={f}>
@@ -672,8 +670,8 @@ export default function FileBrowser() {
                       onChange={() => toggleSelect(f.id)}
                       onClick={(e) => e.stopPropagation()}
                       className={`size-4 accent-primary transition-opacity ${
-                        selected.has(f.id) 
-                          ? "opacity-100" 
+                        selected.has(f.id)
+                          ? "opacity-100"
                           : "opacity-0 group-hover:opacity-100 focus:opacity-100 max-sm:opacity-100"
                       }`}
                     />
@@ -704,7 +702,7 @@ export default function FileBrowser() {
               ))}
             </div>
           ) : (
-            /* ── List ── */
+            /* â”€â”€ List â”€â”€ */
             <div className="rounded-xl border border-border overflow-hidden bg-card">
               {/* Header */}
               <div className="flex items-center gap-3 px-3 py-2 bg-muted/20 border-b text-xs font-medium text-muted-foreground">
@@ -720,14 +718,14 @@ export default function FileBrowser() {
                     className="group flex items-center gap-3 px-3 py-1.5 hover:bg-muted/40 cursor-pointer border-b last:border-0 transition-colors"
                     onClick={() => openItem(f)}
                   >
-                    <input 
-                      type="checkbox" 
-                      checked={selected.has(f.id)} 
-                      onChange={() => toggleSelect(f.id)} 
-                      onClick={(e) => e.stopPropagation()} 
+                    <input
+                      type="checkbox"
+                      checked={selected.has(f.id)}
+                      onChange={() => toggleSelect(f.id)}
+                      onClick={(e) => e.stopPropagation()}
                       className={`size-4 accent-primary shrink-0 transition-opacity ${
-                        selected.has(f.id) 
-                          ? "opacity-100" 
+                        selected.has(f.id)
+                          ? "opacity-100"
                           : "opacity-0 group-hover:opacity-100 focus:opacity-100 max-sm:opacity-100"
                       }`}
                     />
@@ -741,7 +739,7 @@ export default function FileBrowser() {
                       {formatDate(f.modifiedTime)}
                     </span>
                     <span className="w-16 text-right text-xs text-muted-foreground shrink-0">
-                      {f.isFolder ? "—" : formatFileSize(f.size)}
+                      {f.isFolder ? "â€”" : formatFileSize(f.size)}
                     </span>
                     <div onClick={(e) => e.stopPropagation()} className="shrink-0 w-8 flex justify-end">
                       <FileMenu f={f} />
@@ -752,7 +750,7 @@ export default function FileBrowser() {
             </div>
           )}
 
-          {/* ── Dialogs ── */}
+          {/* â”€â”€ Dialogs â”€â”€ */}
 
           {/* Delete */}
           <Dialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
@@ -827,10 +825,10 @@ export default function FileBrowser() {
               ) : shareLink ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <Input 
-                      readOnly 
-                      value={shareLink} 
-                      className="flex-1 font-mono text-xs bg-muted/30 text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0" 
+                    <Input
+                      readOnly
+                      value={shareLink}
+                      className="flex-1 font-mono text-xs bg-muted/30 text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Button
                       size="icon"
@@ -873,7 +871,7 @@ export default function FileBrowser() {
                 {/* Preview for images */}
                 {previewTarget?.mimeType.startsWith("image/") && (
                   <div className="rounded-xl overflow-hidden border border-border bg-muted/20">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    { }
                     <img
                       src={previewTarget.thumbnailLink?.replace(/=s\d+/, "=s2048") || previewTarget.webViewLink || ""}
                       alt={previewTarget.name}
@@ -921,7 +919,7 @@ export default function FileBrowser() {
                     </div>
                   )}
               </div>
-              
+
               <DialogFooter>
                 <Button variant="outline" onClick={() => setPreviewTarget(null)}>
                   Tutup
@@ -932,7 +930,7 @@ export default function FileBrowser() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-          {/* Dialog Buat Spreadsheet — moved to /spreadsheets page */}
+          {/* Dialog Buat Spreadsheet â€” moved to /spreadsheets page */}
 
         </>
       )}

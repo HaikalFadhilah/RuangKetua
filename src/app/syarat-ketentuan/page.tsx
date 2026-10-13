@@ -39,7 +39,7 @@ export default function SyaratKetentuanPage() {
 
       <h2>5. Batasan Tanggung Jawab</h2>
       <p>
-        Layanan disediakan "sebagaimana adanya". Ruang Ketua tidak bertanggung jawab atas kerugian
+        Layanan disediakan &quot;sebagaimana adanya&quot;. Ruang Ketua tidak bertanggung jawab atas kerugian
         yang timbul akibat penggunaan layanan.
       </p>
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, CalendarClock } from "lucide-react";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { Reveal, RevealSection } from "@/components/motion/reveal";
 
 export function ContentPage({
   title,
@@ -18,10 +19,9 @@ export function ContentPage({
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader />
 
-      {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border pt-28 pb-14">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background" />
-        <div className="pointer-events-none absolute -top-24 right-0 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+      <RevealSection className="relative overflow-hidden border-b border-border pt-28 pb-14">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(99,102,241,0.06),transparent_72%)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
         <div className="relative mx-auto max-w-3xl px-4 sm:px-6">
           <Link
             href="/"
@@ -44,13 +44,14 @@ export function ContentPage({
             </div>
           )}
         </div>
-      </section>
+      </RevealSection>
 
-      {/* Content */}
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 sm:px-6">
-        <article className="space-y-6 text-sm leading-relaxed text-muted-foreground [&_h2]:mb-3 [&_h2]:mt-2 [&_h2]:border-l-2 [&_h2]:border-primary [&_h2]:pl-3 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-foreground [&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_li]:marker:text-primary [&_strong]:font-semibold [&_strong]:text-foreground [&_a]:font-medium [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2">
-          {children}
-        </article>
+        <Reveal>
+          <article className="space-y-6 text-sm leading-relaxed text-muted-foreground [&_h2]:mb-3 [&_h2]:mt-2 [&_h2]:border-l-2 [&_h2]:border-primary [&_h2]:pl-3 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-foreground [&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_li]:marker:text-primary [&_strong]:font-semibold [&_strong]:text-foreground [&_a]:font-medium [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2">
+            {children}
+          </article>
+        </Reveal>
       </main>
 
       <SiteFooter />

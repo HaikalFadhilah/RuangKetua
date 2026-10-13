@@ -3,25 +3,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
 import {
-  MessageSquare,
   QrCode,
-  Wifi,
   WifiOff,
   RefreshCw,
-  Users,
   Loader2,
   CheckCircle2,
-  Search,
   ShieldCheck,
   Smartphone,
-  Info,
-  Radio
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
@@ -39,6 +33,8 @@ interface WAStatusData {
   qr: string | null;
   user: { id: string; name: string } | null;
   groups: WAGroup[];
+  defaultGroupId?: string | null;
+  defaultGroupName?: string | null;
 }
 
 export default function WhatsAppPage() {
@@ -47,9 +43,8 @@ export default function WhatsAppPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [isSavingGroup, setIsSavingGroup] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
-  const [searchGroup, setSearchGroup] = useState("");
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -94,7 +89,6 @@ export default function WhatsAppPage() {
       const data = await res.json();
       if (data.success) {
         toast.success(t("wa.toast.disconnected"));
-        setSelectedGroups([]);
         fetchStatus();
       }
     } catch {
@@ -105,15 +99,29 @@ export default function WhatsAppPage() {
     }
   };
 
-  const toggleGroup = (id: string) => {
-    setSelectedGroups((prev) =>
-      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
-    );
+  const handleDefaultGroupChange = async (groupId: string) => {
+    if (!groupId) return;
+    setIsSavingGroup(true);
+    try {
+      const res = await fetch("/api/whatsapp/status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ groupId }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      setWaStatus((current) => current ? {
+        ...current,
+        defaultGroupId: data.data.defaultGroupId,
+        defaultGroupName: data.data.defaultGroupName,
+      } : current);
+      toast.success(t("wa.defaultGroupSaved"));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("wa.defaultGroupSaveError"));
+    } finally {
+      setIsSavingGroup(false);
+    }
   };
-
-  const filteredGroups = waStatus?.groups?.filter(g => 
-    g.subject.toLowerCase().includes(searchGroup.toLowerCase())
-  ) || [];
 
   const connectionStatus = waStatus?.connected
     ? "connected"
@@ -277,7 +285,43 @@ export default function WhatsAppPage() {
         </CardContent>
       </Card>
 
-      {/* GROUPS CARD DIHAPUS (Dipindah ke halaman Broadcast) */}
+      {connectionStatus === "connected" && (
+        <Card className="border-border shadow-sm">
+          <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
+                <Users className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold">{t("wa.defaultGroupTitle")}</h2>
+                <p className="mt-1 max-w-xl text-xs leading-relaxed text-muted-foreground">
+                  {t("wa.defaultGroupDesc")}
+                </p>
+              </div>
+            </div>
+            <div className="relative w-full sm:w-[320px]">
+              <select
+                value={waStatus?.defaultGroupId || ""}
+                onChange={(event) => handleDefaultGroupChange(event.target.value)}
+                disabled={isSavingGroup || !waStatus?.groups.length}
+                className="h-10 w-full rounded-lg border border-border bg-background px-3 pr-9 text-sm outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <option value="">
+                  {waStatus?.groups.length ? t("wa.defaultGroupPlaceholder") : t("wa.defaultGroupEmpty")}
+                </option>
+                {waStatus?.groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.subject} ({group.size})
+                  </option>
+                ))}
+              </select>
+              {isSavingGroup && (
+                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <ConfirmDialog
         open={disconnectOpen}

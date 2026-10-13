@@ -17,8 +17,10 @@ export async function POST(request: NextRequest) {
       return errorResponse("Password minimal 6 karakter", 400);
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     const existing = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (existing) {
@@ -33,8 +35,8 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.create({
       data: {
-        name,
-        email,
+        name: name.trim(),
+        email: normalizedEmail,
         password: hashedPassword,
         className: className || null,
         semester: semester || null,

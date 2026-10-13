@@ -14,6 +14,7 @@ export const extra13: Record<Locale, Record<string, string>> = {
     "admin.nav.universities": "Universitas",
     "admin.nav.vouchers": "Voucher",
     "admin.nav.systemSettings": "Pengaturan Sistem",
+    "admin.nav.team": "Tim Proyek",
 
     // ── Admin member filter ──
     "admin.filter.all": "Semua",
@@ -353,6 +354,7 @@ export const extra13: Record<Locale, Record<string, string>> = {
     "admin.nav.universities": "Universities",
     "admin.nav.vouchers": "Vouchers",
     "admin.nav.systemSettings": "System Settings",
+    "admin.nav.team": "Project Team",
 
     // ── Admin member filter ──
     "admin.filter.all": "All",

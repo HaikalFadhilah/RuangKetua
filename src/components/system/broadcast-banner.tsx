@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Megaphone, X } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { id as idLocale } from "date-fns/locale";
 
 export function BroadcastBanner() {
   const [broadcast, setBroadcast] = useState<any>(null);
@@ -27,7 +25,7 @@ export function BroadcastBanner() {
              setVisible(false);
           }
         }
-      } catch (err) {
+      } catch {
         // Silently fail
       }
     }

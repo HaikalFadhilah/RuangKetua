@@ -14,7 +14,6 @@ import {
   TrendingUp,
   Plus,
   Radio,
-  CalendarDays,
   ArrowRight,
   AlertTriangle,
   CheckCircle2,
@@ -34,7 +33,7 @@ import { container, item } from "@/lib/animations";
 const quickActions = [
   { label: "dash.quickTask", href: "/tasks", icon: Plus, color: "text-primary" },
   { label: "dash.quickBroadcast", href: "/broadcast", icon: Radio, color: "text-primary" },
-  { label: "dash.quickReminder", href: "/elearning", icon: Bell, color: "text-primary" },
+  { label: "dash.quickReminder", href: "/reminders", icon: Bell, color: "text-primary" },
   { label: "dash.quickAnnouncement", href: "/announcements", icon: Megaphone, color: "text-primary" },
   { label: "dash.quickFiles", href: "/files", icon: FolderOpen, color: "text-primary" },
   { label: "dash.quickSpreadsheets", href: "/spreadsheets", icon: Sheet, color: "text-primary" },

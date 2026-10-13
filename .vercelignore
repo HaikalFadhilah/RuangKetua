@@ -1,4 +1,13 @@
 .env
 .env.*
 .whatsapp-auth
+.claude
+.devserver.log
+*.log
+*.err
+dump_*.sql
+node_modules
+.next
+coverage
 scripts
+tsconfig.tsbuildinfo

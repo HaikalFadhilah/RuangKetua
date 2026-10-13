@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { container, item } from "@/lib/animations";
 import { Users, Plus, Loader2, Trash2, Search, Edit2, ScanText } from "lucide-react";
-import { useI18n } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,6 @@ type ClassMember = {
 };
 
 export default function MembersPage() {
-  const { t } = useI18n();
   const [members, setMembers] = useState<ClassMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -62,7 +60,7 @@ export default function MembersPage() {
       if (data.success) {
         setMembers(data.data);
       }
-    } catch (error) {
+    } catch {
       toast.error("Gagal memuat buku induk kelas");
     } finally {
       setLoading(false);
@@ -92,7 +90,7 @@ export default function MembersPage() {
       } else {
         toast.error(data.error || "Gagal menyimpan");
       }
-    } catch (error) {
+    } catch {
       toast.error("Terjadi kesalahan server");
     } finally {
       setSubmitting(false);
@@ -140,7 +138,7 @@ export default function MembersPage() {
       } else {
         toast.error("Gagal membaca format OCR");
       }
-    } catch (error) {
+    } catch {
       toast.error("Terjadi kesalahan OCR");
     } finally {
       setOcrScanning(false);

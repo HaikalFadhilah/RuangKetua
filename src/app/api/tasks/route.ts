@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic"; // Memaksa Next.js untuk selalu ambil data terbaru (bypass cache)
+﻿export const dynamic = "force-dynamic"; // Memaksa Next.js untuk selalu ambil data terbaru (bypass cache)
 
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     const search = searchParams.get("search") || "";
     // Paksa jadi Uppercase agar cocok dengan Enum Prisma
-    const status = searchParams.get("status")?.toUpperCase(); 
+    const status = searchParams.get("status")?.toUpperCase();
     const priority = searchParams.get("priority")?.toUpperCase();
     const courseId = searchParams.get("courseId") || "";
     const ALLOWED_SORT = ["createdAt", "deadline", "priority", "status", "title", "updatedAt"];
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const rawSortOrder = searchParams.get("sortOrder") || "desc";
     const sortOrder = rawSortOrder === "asc" ? "asc" : "desc";
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const where: any = { userId };
 
     if (search) {
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         { description: { contains: search } },
       ];
     }
-    
+
     if (status) where.status = status;
     if (priority) where.priority = priority;
     if (courseId) where.courseId = courseId;
@@ -75,14 +75,19 @@ export async function POST(request: NextRequest) {
     // 1. Pastikan Priority & Status huruf besar atau fallback ke default
     const validPriority = priority ? priority.toUpperCase() : "MEDIUM";
     const validStatus = status ? status.toUpperCase() : "PENDING";
-    
+
     // 2. Mencegah empty string ("") masuk ke Foreign Key
     const validCourseId = courseId && courseId.trim() !== "" ? courseId : null;
-    
+
     // 3. Pastikan deadline bukan Invalid Date
+    // datetime-local input sends "2026-07-30T09:45" (no timezone)
+    // We treat it as WIB (UTC+7) explicitly
     let validDeadline = null;
     if (deadline) {
-      const parsedDate = new Date(deadline);
+      const dlStr = String(deadline);
+      // Append +07:00 if no timezone info present
+      const withTz = dlStr.includes("+") || dlStr.includes("Z") ? dlStr : `${dlStr}+07:00`;
+      const parsedDate = new Date(withTz);
       if (!isNaN(parsedDate.getTime())) {
         validDeadline = parsedDate;
       }

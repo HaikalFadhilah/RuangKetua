@@ -17,14 +17,11 @@ import {
 } from "@/components/ui/dialog";
 import {
   FileSpreadsheet,
-  Plus,
   ExternalLink,
   Loader2,
   Sheet,
   Users,
-  ClipboardList,
   LayoutGrid,
-  FileText,
   ChevronRight,
   ChevronLeft,
   Wallet,

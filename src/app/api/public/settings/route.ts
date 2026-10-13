@@ -13,6 +13,9 @@ export async function GET() {
       data: {
         appName:       settings.appName,
         adminWhatsapp: settings.adminWhatsapp,
+        teamPhoto1:    settings.teamPhoto1,
+        teamPhoto2:    settings.teamPhoto2,
+        teamPhoto3:    settings.teamPhoto3,
       },
     });
   } catch (error) {

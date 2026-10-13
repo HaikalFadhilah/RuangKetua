@@ -2,68 +2,14 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { getUserIdFromRequest } from "@/lib/api-utils";
-import { GoogleDriveAdapter } from "@/lib/cloud/google-drive";
 import {
   getCloudFiles,
   getStorageForAccount,
-  deleteCloudFile,
   runFullSync,
 } from "@/lib/cloud/sync";
+import { deleteCloudFileForUser } from "@/lib/cloud/delete";
 
 export const runtime = "nodejs";
-
-async function deleteOne(
-  userId: string,
-  accountId: string,
-  remoteFileId: string
-) {
-  const account = await prisma.cloudAccount.findFirst({
-    where: { id: accountId, userId, provider: "google_drive" },
-  });
-  if (!account) return;
-  // capture size before deleting from mirror
-  const mirror = await prisma.cloudFile.findFirst({ where: { remoteFileId } });
-  try {
-    const adapter = new GoogleDriveAdapter(account);
-    await adapter.deleteFile(remoteFileId);
-  } catch (e) {
-    // jika file sudah tidak ada di Google, abaikan error delete
-    const msg = e instanceof Error ? e.message : String(e);
-    if (!/404|notFound|not found/i.test(msg)) throw e;
-  }
-  if (mirror) {
-    const used = Math.max(0, Number(account.quotaUsed || 0) - (mirror.size || 0));
-    await prisma.cloudAccount.update({
-      where: { id: accountId },
-      data: { quotaUsed: String(used) },
-    });
-    
-    // Hapus juga catatan di repository (Material) dan SharedFile 
-    // agar file yang musnah di Drive tidak nyangkut menjadi "ghost file"
-    try {
-      await prisma.material.deleteMany({
-        where: { 
-          OR: [
-             { fileUrl: { contains: remoteFileId } },
-             { fileUrl: mirror.webViewLink || "impossible-match" }
-          ]
-        }
-      });
-      await prisma.sharedFile.deleteMany({
-        where: { 
-          OR: [
-             { fileUrl: { contains: remoteFileId } },
-             { fileUrl: mirror.webViewLink || "impossible-match" },
-             { shareToken: { contains: remoteFileId } }
-          ]
-        }
-      });
-    } catch(e) {
-      console.error("Gagal membersihkan dependensi file hantu:", e);
-    }
-  }
-  await deleteCloudFile(remoteFileId);
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -125,14 +71,14 @@ export async function DELETE(request: NextRequest) {
         const mirror = await prisma.cloudFile.findFirst({
           where: { remoteFileId: rid, userId },
         });
-        if (mirror) await deleteOne(userId, mirror.accountId, rid);
+        if (mirror) await deleteCloudFileForUser(userId, mirror.accountId, rid);
       }
       return successResponse(null, "File berhasil dihapus");
     }
 
     if (!accountId || !fileId)
       return errorResponse("accountId & fileId wajib diisi", 400);
-    await deleteOne(userId, accountId, fileId);
+    await deleteCloudFileForUser(userId, accountId, fileId);
     return successResponse(null, "File berhasil dihapus");
   } catch (error) {
     console.error("DELETE /api/drive/files error:", error);

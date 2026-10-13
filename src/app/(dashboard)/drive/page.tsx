@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -51,14 +51,13 @@ export default function DrivePage() {
   const [accountsLoading, setAccountsLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
-  const [uploadMode, setUploadMode] = useState<"manual" | "auto">("manual");
   const [strategy, setStrategy] = useState<string>("round_robin");
   const [allocOrder, setAllocOrder] = useState<string[]>([]);
   const [savingAlloc, setSavingAlloc] = useState(false);
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
-  // ── OAuth return handler ──
+  // â”€â”€ OAuth return handler â”€â”€
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const status = params.get("status");
@@ -77,7 +76,7 @@ export default function DrivePage() {
       toast.error(t("drive.connectErrorPrefix", { msg }));
       window.history.replaceState({}, "", "/drive");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
 
   const fetchAllocation = useCallback(async () => {
@@ -85,14 +84,13 @@ export default function DrivePage() {
       const res = await fetch("/api/user/settings");
       const data = await res.json();
       if (data.success) {
-        setUploadMode(data.data.driveUploadMode || "manual");
         setStrategy(data.data.allocationStrategy || "round_robin");
         setAllocOrder(data.data.allocationOrder || []);
       }
     } catch {
       /* ignore */
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
 
   const fetchAccounts = useCallback(async (sync = false) => {
@@ -126,7 +124,7 @@ export default function DrivePage() {
     } finally {
       setSyncing(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [t]);
 
   const enrichedAccounts = accounts.map((a, i) => {
@@ -176,19 +174,6 @@ export default function DrivePage() {
       setAccounts((prev) => prev.filter((a) => a.id !== id));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("drive.disconnectFailed"));
-    }
-  };
-
-  const updateUploadMode = async (mode: "manual" | "auto") => {
-    setUploadMode(mode);
-    try {
-      await fetch("/api/user/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ driveUploadMode: mode }),
-      });
-    } catch {
-      /* ignore */
     }
   };
 

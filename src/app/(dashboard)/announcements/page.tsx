@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Bell, Megaphone, Edit3, Trash2, Pin, Loader2 } from "lucide-react";
+import { Plus, Search, Megaphone, Edit3, Trash2, Pin, Loader2 } from "lucide-react";
 import { ANNOUNCEMENT_CATEGORIES } from "@/config/constants";
 import { formatRelativeTime } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
@@ -77,6 +77,13 @@ export default function AnnouncementsPage() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
       toast.success(editing ? t("announce.toast.updated") : t("announce.toast.created"));
+      if (!editing && data.data?._broadcast?.requested) {
+        if (data.data._broadcast.sent) {
+          toast.success(t("announce.toast.broadcastSent"));
+        } else {
+          toast.error(data.data._broadcast.error || t("announce.toast.broadcastFailed"));
+        }
+      }
       setIsDialogOpen(false);
       fetchAnnouncements();
     } catch (err) { toast.error(err instanceof Error ? err.message : t("announce.toast.saveError")); }
@@ -167,7 +174,9 @@ export default function AnnouncementsPage() {
             </div>
             <div className="flex items-center gap-6">
               <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={form.pinned} onChange={(e) => setForm({ ...form, pinned: e.target.checked })} className="rounded" />{t("announce.pin")}</label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={form.broadcast} onChange={(e) => setForm({ ...form, broadcast: e.target.checked })} className="rounded" />{t("announce.broadcastWa")}</label>
+              {!editing && (
+                <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={form.broadcast} onChange={(e) => setForm({ ...form, broadcast: e.target.checked })} className="rounded" />{t("announce.broadcastWa")}</label>
+              )}
             </div>
           </div>
           <DialogFooter>

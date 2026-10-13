@@ -59,7 +59,11 @@ export async function PUT(
         title: title || undefined,
         description: description !== undefined ? description : undefined,
         courseId: courseId !== undefined ? courseId || null : undefined,
-        deadline: deadline !== undefined ? (deadline ? new Date(deadline) : null) : undefined,
+        deadline: deadline !== undefined ? (deadline ? (() => {
+          const dlStr = String(deadline);
+          const withTz = dlStr.includes("+") || dlStr.includes("Z") ? dlStr : `${dlStr}+07:00`;
+          return new Date(withTz);
+        })() : null) : undefined,
         priority: priority || undefined,
         status: status || undefined,
       },

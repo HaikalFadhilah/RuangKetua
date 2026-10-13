@@ -1,13 +1,12 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
 import toast from "react-hot-toast";
 import {
-  FileText, Plus, Pencil, Trash2, Eye, Save, X,
+  Plus, Pencil, Trash2, Eye, Save, X,
   Sparkles, ListChecks, ListOrdered, Quote, ImageIcon, Lightbulb, Flag,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -49,7 +48,7 @@ const TEMPLATES: { label: string; icon: LucideIcon; snippet: string }[] = [
     label: "Daftar Fitur",
     icon: ListChecks,
     snippet:
-      "\n## Fitur Utama\n\n- **[Nama Fitur]** — [Penjelasan singkat keunggulan fitur ini.]\n- **[Nama Fitur]** — [Penjelasan singkat keunggulan fitur ini.]\n- **[Nama Fitur]** — [Penjelasan singkat keunggulan fitur ini.]\n",
+      "\n## Fitur Utama\n\n- **[Nama Fitur]** â€” [Penjelasan singkat keunggulan fitur ini.]\n- **[Nama Fitur]** â€” [Penjelasan singkat keunggulan fitur ini.]\n- **[Nama Fitur]** â€” [Penjelasan singkat keunggulan fitur ini.]\n",
   },
   {
     label: "Langkah-langkah",
@@ -116,7 +115,7 @@ export function BlogManager() {
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+
   useEffect(() => { load(); }, [load]);
 
   function resetForm() {
@@ -224,7 +223,7 @@ export function BlogManager() {
         <div>
           <h2 className="font-semibold">Artikel Blog</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Buat, edit, dan hapus artikel yang tampil di halaman publik /blog.
+            Buat, edit, dan hapus draft artikel internal.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -247,17 +246,17 @@ export function BlogManager() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-16 text-center text-muted-foreground">Memuat…</td></tr>
+              <tr><td colSpan={5} className="px-4 py-16 text-center text-muted-foreground">Memuatâ€¦</td></tr>
             ) : posts.length === 0 ? (
               <tr><td colSpan={5} className="px-4 py-16 text-center text-muted-foreground">
-                Belum ada artikel. Klik “Tulis Artikel” untuk memulai.
+                Belum ada artikel. Klik â€œTulis Artikelâ€ untuk memulai.
               </td></tr>
             ) : (
               posts.map((p) => (
                 <tr key={p.id} className="border-b border-border/60 last:border-0">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 font-medium text-foreground">
-                      <span>{p.coverEmoji || "📄"}</span>
+                      <span>{p.coverEmoji || "ðŸ“„"}</span>
                       <span className="line-clamp-1">{p.title}</span>
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">/{p.slug}</p>
@@ -275,11 +274,6 @@ export function BlogManager() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      {p.status === "published" && (
-                        <Link href={`/blog/${p.slug}`} target="_blank" title="Lihat">
-                          <Button size="icon-sm" variant="ghost"><Eye className="h-4 w-4" /></Button>
-                        </Link>
-                      )}
                       <Button size="icon-sm" variant="ghost" onClick={() => openEdit(p)} title="Edit">
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -320,7 +314,7 @@ export function BlogManager() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="emoji">Emoji Sampul</Label>
-                <Input id="emoji" value={form.coverEmoji} onChange={(e) => setForm((f) => ({ ...f, coverEmoji: e.target.value }))} placeholder="👋" />
+                <Input id="emoji" value={form.coverEmoji} onChange={(e) => setForm((f) => ({ ...f, coverEmoji: e.target.value }))} placeholder="ðŸ‘‹" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="rt">Waktu Baca</Label>
@@ -394,7 +388,7 @@ export function BlogManager() {
                   className="min-h-[320px] font-mono text-[13px] leading-relaxed"
                   value={form.content}
                   onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
-                  placeholder={"Tulis artikel dalam format Markdown…\n\n## Heading\nTeks **tebal**, *miring*, dan daftar."}
+                  placeholder={"Tulis artikel dalam format Markdownâ€¦\n\n## Heading\nTeks **tebal**, *miring*, dan daftar."}
                 />
               )}
             </div>
@@ -405,7 +399,7 @@ export function BlogManager() {
               <X className="h-4 w-4" /> Batal
             </Button>
             <Button onClick={handleSave} disabled={saving} className="gap-2">
-              <Save className="h-4 w-4" /> {saving ? "Menyimpan…" : "Simpan"}
+              <Save className="h-4 w-4" /> {saving ? "Menyimpanâ€¦" : "Simpan"}
             </Button>
           </DialogFooter>
         </DialogContent>

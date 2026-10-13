@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Ambil webViewLink dari CloudFile yang baru dibuat
-    const cloudFile = await prisma.cloudFile.findUnique({
-      where: { id: driveResult.id },
+    const cloudFile = await prisma.cloudFile.findFirst({
+      where: { userId, remoteFileId: driveResult.id },
     });
 
     const fileUrl = cloudFile?.webViewLink || "#";

@@ -19,10 +19,9 @@ import {
   Trash2,
   Search,
   BookOpen,
-  Loader2,
   ArrowLeft,
   File,
-  Image,
+  Image as ImageIcon,
 } from "lucide-react";
 import { formatDate, formatFileSize } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
@@ -47,7 +46,7 @@ import { container, item } from "@/lib/animations";
 
 function getFileIcon(type: string) {
   if (type.includes("pdf")) return <FileText className="h-5 w-5 text-red-400" />;
-  if (type.includes("image") || type.includes("png") || type.includes("jpg")) return <Image className="h-5 w-5 text-orange-400" />;
+  if (type.includes("image") || type.includes("png") || type.includes("jpg")) return <ImageIcon className="h-5 w-5 text-orange-400" />;
   if (type.includes("ppt") || type.includes("presentation")) return <Presentation className="h-5 w-5 text-orange-500" />;
   if (type.includes("doc") || type.includes("word")) return <FileText className="h-5 w-5 text-blue-400" />;
   if (type.includes("zip") || type.includes("rar")) return <FileArchive className="h-5 w-5 text-green-400" />;
@@ -59,7 +58,6 @@ export default function RepositoryPage() {
   const [files, setFiles] = useState<RepoFile[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
   const [search, setSearch] = useState("");
   const [fileCounts, setFileCounts] = useState<Record<string, number>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -72,17 +70,6 @@ export default function RepositoryPage() {
       const data = await res.json();
       if (data.success) {
         setCourses(data.data || []);
-      } else {
-        // Fallback: extract from dosen
-        const resDosen = await fetch("/api/dosen");
-        const dataDosen = await resDosen.json();
-        if (dataDosen.success) {
-          const courseSet = new Map<string, Course>();
-          (dataDosen.data || []).forEach((d: { courses?: Course[] }) => {
-            d.courses?.forEach((c: Course) => courseSet.set(c.id, c));
-          });
-          setCourses(Array.from(courseSet.values()));
-        }
       }
     } catch { /* silent */ }
     finally { setIsLoading(false); }
@@ -127,7 +114,6 @@ export default function RepositoryPage() {
 
   const handleUpload = async (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return;
-    setIsUploading(true);
     try {
       for (let i = 0; i < fileList.length; i++) {
         const f = fileList[i];
@@ -143,7 +129,7 @@ export default function RepositoryPage() {
       fetchFiles(selectedCourse?.id);
       fetchFileCounts();
     } catch (err) { toast.error(err instanceof Error ? err.message : t("repo.uploadError")); }
-    finally { setIsUploading(false); if (fileInputRef.current) fileInputRef.current.value = ""; }
+    finally { if (fileInputRef.current) fileInputRef.current.value = ""; }
   };
 
   const handleDelete = async (id: string) => {

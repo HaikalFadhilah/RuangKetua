@@ -6,6 +6,10 @@ import { getUserIdFromRequest } from "@/lib/api-utils";
 export async function GET(request: NextRequest) {
   try {
     const userId = getUserIdFromRequest(request);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
 
     const [
       totalTasks,
@@ -46,16 +50,35 @@ export async function GET(request: NextRequest) {
         where: { userId },
         _count: { status: true },
       }),
-      prisma.reminder.count({
-        where: {
-          userId,
-          sent: false,
-          remindAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
-            lt: new Date(new Date().setHours(23, 59, 59, 999)),
+      Promise.all([
+        prisma.reminder.count({
+          where: {
+            userId,
+            sent: false,
+            remindAt: { gte: todayStart, lt: tomorrowStart },
           },
-        },
-      }),
+        }),
+        prisma.task.count({
+          where: {
+            userId,
+            status: { not: "COMPLETED" },
+            deadline: { gte: todayStart, lt: tomorrowStart },
+          },
+        }),
+        prisma.eLearning.count({
+          where: {
+            course: { userId },
+            isActive: true,
+            endDate: { gte: todayStart, lt: tomorrowStart },
+          },
+        }),
+        prisma.calendarEvent.count({
+          where: {
+            userId,
+            startDate: { gte: todayStart, lt: tomorrowStart },
+          },
+        }),
+      ]).then((counts) => counts.reduce((total, count) => total + count, 0)),
       prisma.task.findMany({
         where: {
           userId,

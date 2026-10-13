@@ -2,14 +2,13 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 
-// [FIX Diterapkan]: Memaksa pengambilan key agar konsisten antara Edge Config & Node Config
-const rawSecret = process.env.JWT_SECRET;
-if (!rawSecret || rawSecret.length < 32) {
-  throw new Error("JWT_SECRET environment variable is not set or too short (min 32 chars)");
+const rawSecret = process.env.JWT_SECRET?.trim();
+
+if (!rawSecret && process.env.NODE_ENV === "production") {
+  throw new Error("JWT_SECRET wajib diisi di production");
 }
 
-const JWT_SECRET = new TextEncoder().encode(rawSecret);
-
+const JWT_SECRET = new TextEncoder().encode(rawSecret || "dev-secret-key-change-in-production-min-32-chars!!");
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 export interface JWTPayload {
@@ -32,7 +31,7 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     return payload as unknown as JWTPayload;
   } catch (error) {
-    console.error(`[Auth] Gagal verifikasi token:`, error);
+    console.error("[Auth] Gagal verifikasi token:", error);
     return null;
   }
 }
@@ -43,13 +42,11 @@ export async function getTokenFromCookies(): Promise<string | null> {
 }
 
 export async function getTokenFromRequest(req: NextRequest): Promise<string | null> {
-  // Check Authorization header first
   const authHeader = req.headers.get("authorization");
   if (authHeader?.startsWith("Bearer ")) {
     return authHeader.substring(7);
   }
 
-  // Then check cookies
   return req.cookies.get("admin_token")?.value || req.cookies.get("token")?.value || null;
 }
 

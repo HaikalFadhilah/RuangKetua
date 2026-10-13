@@ -17,7 +17,7 @@ const TYPE_COLORS: Record<string, string> = {
 // Coba berbagai cara parsing JSON — handle output AI yang tidak sempurna
 function tryParseJSON(raw: string): unknown[] | null {
   // 1. Bersihkan markdown code block
-  let cleaned = raw
+  const cleaned = raw
     .replace(/```json\s*/gi, "")
     .replace(/```\s*/g, "")
     .trim();

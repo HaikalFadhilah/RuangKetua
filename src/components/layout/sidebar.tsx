@@ -21,7 +21,6 @@ import {
   Bell,
   BarChart3,
   Bot,
-  ScanText,
   FolderClosed,
   Users,
   StickyNote,
@@ -34,6 +33,8 @@ import {
   BellRing,
   HardDrive,
   Sheet,
+  AlarmClock,
+  ScanText,
 } from "lucide-react";
 
 const NAV_SECTIONS = [
@@ -43,6 +44,7 @@ const NAV_SECTIONS = [
       { key: "nav.dashboard",   href: "/dashboard",   icon: LayoutDashboard },
       { key: "nav.tasks",       href: "/tasks",        icon: ListTodo },
       { key: "nav.calendar",    href: "/calendar",     icon: CalendarDays },
+      { key: "nav.reminders",   href: "/reminders",    icon: AlarmClock },
       { key: "nav.statistics",  href: "/statistics",   icon: BarChart3 },
     ],
   },
@@ -74,6 +76,7 @@ const NAV_SECTIONS = [
       { key: "nav.members",       href: "/members",       icon: Users },
       { key: "nav.notes",       href: "/notes",        icon: StickyNote },
       { key: "nav.aiAssistant", href: "/ai-assistant", icon: Bot },
+      { key: "nav.ocr",         href: "/ocr",          icon: ScanText },
     ],
   },
   {

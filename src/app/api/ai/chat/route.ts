@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
           });
           contextParts.push(s);
         }
-      } catch (err) {
+      } catch {
         // Abaikan jika gagal mengambil konteks
       }
     }

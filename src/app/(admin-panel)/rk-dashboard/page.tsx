@@ -24,7 +24,7 @@ import {
   TrendingUp, UserPlus, AlertCircle, CheckCircle2,
   Clock, XCircle, Eye, EyeOff, Menu, Lock, Unlock, Download,
   HardDrive, Settings, LifeBuoy, GraduationCap, Wifi, WifiOff,
-  FileText, ToggleLeft, ToggleRight, Send, Ticket
+  FileText, ToggleLeft, Send, Ticket
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -77,6 +77,7 @@ const NAV: { titleKey: string; items: { id: string; labelKey: string; icon: Luci
     titleKey: "admin.nav.sectionSystem",
     items: [
       { id: "settings", labelKey: "admin.nav.systemSettings", icon: Settings },
+      { id: "team", labelKey: "admin.nav.team", icon: Users },
     ],
   },
 ];
@@ -203,6 +204,8 @@ export default function AdminDashboardPage() {
   const [waMonitor, setWaMonitor] = useState<any>(null);
   const [sysSettings, setSysSettings] = useState<any>(null);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [teamPhotos, setTeamPhotos] = useState<{ photo1: string | null; photo2: string | null; photo3: string | null }>({ photo1: null, photo2: null, photo3: null });
+  const [uploadingMember, setUploadingMember] = useState<number | null>(null);
   const [uniForm, setUniForm] = useState({ name: "", shortName: "", city: "" });
   const [addingUni, setAddingUni] = useState(false);
   const [ticketReply, setTicketReply] = useState<{ id: string; msg: string } | null>(null);
@@ -262,7 +265,6 @@ export default function AdminDashboardPage() {
   }, []);
 
   const fetchAnnouncements = useCallback(async () => {
-    const res = await fetch("/api/admin/stats"); // Using admin stats info? Actually we should hit specific announcement API if we had one. But let's fetch it via /api/announcements
     const res2 = await fetch("/api/announcements?limit=100");
     const d2 = await res2.json();
     if (d2.success) setAnnouncements(d2.data ?? d2.announcements ?? []);
@@ -310,6 +312,36 @@ export default function AdminDashboardPage() {
     if (d.success) setSysSettings(d.data);
   }, []);
 
+  const fetchTeamPhotos = useCallback(async () => {
+    const res = await fetch("/api/public/settings");
+    const d = await res.json();
+    if (d.success) {
+      setTeamPhotos({
+        photo1: d.data?.teamPhoto1 ?? null,
+        photo2: d.data?.teamPhoto2 ?? null,
+        photo3: d.data?.teamPhoto3 ?? null,
+      });
+    }
+  }, []);
+
+  const handleTeamPhotoUpload = async (memberIndex: number, file: File) => {
+    setUploadingMember(memberIndex);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("memberIndex", String(memberIndex));
+      const res = await fetch("/api/admin/team-photo", { method: "POST", body: formData });
+      const d = await res.json();
+      if (!d.success) throw new Error(d.error);
+      toast.success("Foto berhasil diupload");
+      fetchTeamPhotos();
+    } catch (err: any) {
+      toast.error(err.message || "Gagal upload foto");
+    } finally {
+      setUploadingMember(null);
+    }
+  };
+
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
@@ -317,7 +349,8 @@ export default function AdminDashboardPage() {
         fetchStats(), fetchUsers(), fetchForums(), fetchChats(),
         fetchAnnouncements(), fetchActivity(),
         fetchAdminFiles(), fetchTickets(), fetchUniversities(),
-        fetchWaMonitor(), fetchSysSettings(), fetchVouchers()
+        fetchWaMonitor(), fetchSysSettings(), fetchVouchers(),
+        fetchTeamPhotos(),
       ]);
       setSelectedUsers([]);
       setSelectedForums([]);
@@ -326,7 +359,7 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchStats, fetchUsers, fetchForums, fetchChats, fetchAnnouncements, fetchActivity, fetchAdminFiles, fetchTickets, fetchUniversities, fetchWaMonitor, fetchSysSettings, fetchVouchers]);
+  }, [fetchStats, fetchUsers, fetchForums, fetchChats, fetchAnnouncements, fetchActivity, fetchAdminFiles, fetchTickets, fetchUniversities, fetchWaMonitor, fetchSysSettings, fetchVouchers, fetchTeamPhotos]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -1625,6 +1658,62 @@ export default function AdminDashboardPage() {
                     </div>
                   </Card>
                 </motion.div>
+              </motion.div>
+            )}
+
+            {/* ══ TIM PROYEK ═══════════════════════════════════════ */}
+            {activeNav === "team" && (
+              <motion.div key="team" variants={stagger} initial="hidden" animate="show" className="space-y-4">
+                <motion.div variants={fadeUp}>
+                  <h2 className="font-semibold">Tim Proyek</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">Upload foto anggota tim untuk ditampilkan di landing page.</p>
+                </motion.div>
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {[
+                    { idx: 1, name: "Andra Rafi Irgi", nim: "231011450403", photo: teamPhotos.photo1 },
+                    { idx: 2, name: "Mawar Iskandar", nim: "231011450351", photo: teamPhotos.photo2 },
+                    { idx: 3, name: "Muhammad Haeckal Fadhilah", nim: "231011450540", photo: teamPhotos.photo3 },
+                  ].map((member) => (
+                    <motion.div key={member.idx} variants={fadeUp}>
+                      <Card className="border-border/60">
+                        <CardContent className="p-5 flex flex-col items-center text-center">
+                          <div className="relative mb-4">
+                            <div className="h-28 w-28 rounded-full overflow-hidden border-2 border-border bg-muted">
+                              {member.photo ? (
+                                <img src={member.photo} alt={member.name} className="h-full w-full object-cover" />
+                              ) : (
+                                <div className="h-full w-full flex items-center justify-center">
+                                  <Users className="h-10 w-10 text-muted-foreground/40" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-sm font-semibold">{member.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{member.nim}</p>
+                          <label className="mt-4 cursor-pointer">
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleTeamPhotoUpload(member.idx, file);
+                              }}
+                            />
+                            <span className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-background px-4 text-xs font-medium hover:bg-accent transition-colors">
+                              {uploadingMember === member.idx ? (
+                                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading...</>
+                              ) : (
+                                <>{member.photo ? "Ganti foto" : "Upload foto"}</>
+                              )}
+                            </span>
+                          </label>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
               </motion.div>
             )}
 

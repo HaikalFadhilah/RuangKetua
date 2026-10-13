@@ -1,6 +1,18 @@
 import { NextRequest } from "next/server";
+import fs from "fs/promises";
+import path from "path";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/api-response";
+
+async function cleanupAttachmentFiles(raw: string | null) {
+  if (!raw) return;
+  try {
+    const attachments: { url: string }[] = JSON.parse(raw);
+    for (const att of attachments) {
+      try { await fs.unlink(path.join(process.cwd(), "public", att.url)); } catch { /* ignore */ }
+    }
+  } catch { /* ignore parse errors */ }
+}
 
 export async function POST(
   request: NextRequest,
@@ -13,7 +25,7 @@ export async function POST(
     const userRole = request.headers.get("x-user-role");
     const { id: postId } = await params;
     const body = await request.json();
-    const { content } = body;
+    const { content, attachments } = body;
 
     if (!content?.trim()) return errorResponse("Komentar tidak boleh kosong", 400);
 
@@ -32,7 +44,7 @@ export async function POST(
     }
 
     const comment = await prisma.forumComment.create({
-      data: { postId, userId, content: content.trim() },
+      data: { postId, userId, content: content.trim(), attachments: attachments ? JSON.stringify(attachments) : null },
       include: {
         user: {
           select: { id: true, name: true, avatar: true, className: true, university: true, role: true },
@@ -71,6 +83,7 @@ export async function DELETE(
       return errorResponse("Akses ditolak", 403);
     }
 
+    await cleanupAttachmentFiles(comment.attachments);
     await prisma.forumComment.delete({ where: { id: commentId } });
 
     return successResponse(null, "Komentar berhasil dihapus");

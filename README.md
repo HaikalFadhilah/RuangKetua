@@ -1,37 +1,125 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ruang Ketua
 
-## Getting Started
+Ruang Ketua adalah dashboard untuk ketua kelas/komti mahasiswa. Aplikasi ini membantu mengelola tugas, jadwal kuliah, pengumuman, anggota kelas, WhatsApp broadcast, Google Drive multi-akun, forum, chat, AI assistant, payment, dan admin panel.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 App Router
+- React 19
+- Prisma 7 dengan MariaDB/MySQL
+- Tailwind CSS 4
+- JWT session dengan `jose`
+- Baileys untuk WhatsApp gateway
+- Google APIs untuk Google Drive
+- Groq-compatible chat completions untuk fitur AI
+
+## Setup Lokal
+
+Gunakan Node.js `>=20.9.0`. Next.js 16 tidak bisa build di Node 18.
+
+1. Install dependency:
+
+```bash
+npm install
+```
+
+2. Salin env:
+
+```bash
+copy .env.example .env
+```
+
+3. Isi minimal env berikut:
+
+```bash
+DATABASE_URL="mysql://user:password@localhost:3306/ruangketua"
+JWT_SECRET="random-secret-minimal-32-karakter"
+CRON_SECRET="random-secret-untuk-cron"
+GROQ_API_KEY="gsk_..."
+GROQ_MODEL="llama-3.3-70b-versatile"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+DRIVE_TOKEN_SECRET="random-secret-minimal-32-karakter"
+```
+
+4. Jalankan migration dan generate Prisma client:
+
+```bash
+npm run db:dev
+npm run db:generate
+```
+
+5. Buat akun admin:
+
+```bash
+$env:ADMIN_EMAIL="admin@ruangketua.id"
+$env:ADMIN_PASSWORD="ganti-password-kuat"
+npm run admin:create
+```
+
+6. Jalankan dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Script Penting
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run dev`: menjalankan Next.js development server.
+- `npm run build`: generate Prisma client lalu build Next.js.
+- `npm run start`: menjalankan build production.
+- `npm run lint`: menjalankan ESLint.
+- `npm run typecheck`: menjalankan TypeScript tanpa emit.
+- `npm run check`: menjalankan lint dan typecheck.
+- `npm run db:generate`: generate Prisma client.
+- `npm run db:dev`: membuat dan menjalankan migration lokal.
+- `npm run db:migrate`: menjalankan migration untuk environment production/CI.
+- `npm run admin:create`: membuat atau menaikkan user menjadi admin. Gunakan `ADMIN_PASSWORD`.
 
-## Learn More
+## Environment
 
-To learn more about Next.js, take a look at the following resources:
+Lihat `.env.example` untuk daftar lengkap. Jangan commit `.env`; file ini sudah di-ignore.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Catatan penting:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `JWT_SECRET` dan `DRIVE_TOKEN_SECRET` wajib kuat di production.
+- `CRON_SECRET` wajib diisi jika memakai endpoint `/api/cron/*`.
+- `ADMIN_PASSWORD` hanya dipakai saat menjalankan `npm run admin:create`.
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, dan `GOOGLE_REDIRECT_URI` dibutuhkan untuk fitur Google Drive.
+- `GROQ_API_KEY` dibutuhkan untuk fitur AI.
 
-## Deploy on Vercel
+## Database
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Schema utama ada di `prisma/schema.prisma`. Prisma client digenerate ke `src/generated/prisma` dan folder itu tidak perlu diedit manual.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-"# RuangKetua" 
+Untuk production:
+
+```bash
+npm run db:migrate
+npm run build
+```
+
+Pastikan migration selalu sinkron dengan perubahan `schema.prisma` sebelum deploy.
+
+## Struktur Project
+
+- `src/app`: halaman dan route handler API.
+- `src/components`: komponen UI dan fitur.
+- `src/lib`: helper server/client, auth, Prisma, AI, cloud, WhatsApp.
+- `src/config`: konstanta aplikasi.
+- `src/types`: tipe shared frontend/API.
+- `prisma`: schema dan migration database.
+- `public/uploads`: upload lokal. Isi folder tidak di-commit kecuali `.gitkeep`.
+
+## Security Checklist
+
+- Jangan gunakan password admin default.
+- Jalankan admin creation dengan `ADMIN_PASSWORD` yang kuat.
+- Pastikan route admin hanya diakses role `admin` atau `super_admin`.
+- Jangan expose `.env`, token WhatsApp, kredensial Google Drive, atau file di `.whatsapp-auth`.
+- Treat API route sebagai boundary publik: validasi auth dan ownership dekat dengan query database.
+
+## Catatan Development
+
+Repo ini memakai Next.js 16. Sebelum mengubah API Next.js atau file convention seperti `proxy.ts`, cek dokumentasi lokal di `node_modules/next/dist/docs/` karena beberapa API berbeda dari versi lama.

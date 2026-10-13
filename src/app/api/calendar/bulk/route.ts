@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+﻿import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { getUserIdFromRequest } from "@/lib/api-utils";
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         description: ev.description || null,
         startDate,
         endDate,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         type: type as any,
         color: ev.color || null,
         allDay: ev.allDay ?? true,

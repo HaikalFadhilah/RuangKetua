@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -18,7 +18,7 @@ import {
 
 type University = { id: string; name: string; shortName: string | null; city: string | null };
 
-// ── Searchable University Dropdown ───────────────────────────────────────────
+// â”€â”€ Searchable University Dropdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function UniversityDropdown({
   value,
   onChange,
@@ -65,7 +65,7 @@ function UniversityDropdown({
       fetchUniversities(query);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [open]);
 
   // Close on outside click
@@ -220,7 +220,7 @@ function UniversityDropdown({
   );
 }
 
-// ── Register Page ─────────────────────────────────────────────────────────────
+// â”€â”€ Register Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function RegisterPage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -328,7 +328,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* ── Searchable University Dropdown ── */}
+            {/* â”€â”€ Searchable University Dropdown â”€â”€ */}
             <div className="space-y-2">
               <Label>{t("auth.register.university")}</Label>
               <UniversityDropdown

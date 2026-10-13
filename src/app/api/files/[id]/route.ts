@@ -6,6 +6,7 @@ import { unlink } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import crypto from "crypto";
+import { deleteCloudFileForUser } from "@/lib/cloud/delete";
 
 export async function GET(
   request: NextRequest,
@@ -79,14 +80,29 @@ export async function DELETE(
     const file = await prisma.sharedFile.findFirst({ where: { id, userId } });
     if (!file) return errorResponse("File tidak ditemukan", 404);
 
-    // Delete physical file (with path traversal protection)
-    const publicDir = path.resolve(process.cwd(), "public");
-    const filePath = path.resolve(publicDir, file.fileUrl);
-    if (filePath.startsWith(publicDir) && existsSync(filePath)) {
-      await unlink(filePath);
-    }
+    const syncedRemoteId = file.shareToken?.startsWith("sync_")
+      ? file.shareToken.slice("sync_".length)
+      : null;
+    const cloudFile = await prisma.cloudFile.findFirst({
+      where: {
+        userId,
+        OR: [
+          ...(syncedRemoteId ? [{ remoteFileId: syncedRemoteId }] : []),
+          { webViewLink: file.fileUrl },
+        ],
+      },
+    });
 
-    await prisma.sharedFile.delete({ where: { id } });
+    if (cloudFile) {
+      await deleteCloudFileForUser(userId, cloudFile.accountId, cloudFile.remoteFileId);
+    } else {
+      const publicDir = path.resolve(process.cwd(), "public");
+      const filePath = path.resolve(publicDir, file.fileUrl);
+      if (filePath.startsWith(publicDir) && existsSync(filePath)) {
+        await unlink(filePath);
+      }
+      await prisma.sharedFile.delete({ where: { id } });
+    }
 
     await prisma.activityLog.create({
       data: {

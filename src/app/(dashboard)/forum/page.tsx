@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/store";
@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Globe, Building2, Plus, MessageCircle, Clock,
   Trash2, Send, ArrowLeft, Loader2, AlertCircle, ShieldAlert,
+  Paperclip, FileText, Image as ImageIcon, X, Download,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatDistanceToNow } from "date-fns";
@@ -26,11 +27,14 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type TabType = "PUBLIC" | "INTERNAL_CAMPUS";
 
+// Attachment type
+type Attachment = { name: string; url: string; type: string; size: number };
+
 // Extend types to carry role
 type UserWithRole = { id: string; name: string; avatar?: string | null; className?: string | null; university?: string | null; role?: string };
-type ForumPostWithRole = Omit<ForumPost, "user"> & { user: UserWithRole };
-type ForumCommentWithRole = Omit<ForumComment, "user"> & { user: UserWithRole };
-type ForumPostDetailWithRole = Omit<ForumPostDetail, "user" | "comments"> & { user: UserWithRole; comments: ForumCommentWithRole[] };
+type ForumPostWithRole = Omit<ForumPost, "user"> & { user: UserWithRole; attachments?: string | null };
+type ForumCommentWithRole = Omit<ForumComment, "user"> & { user: UserWithRole; attachments?: string | null };
+type ForumPostDetailWithRole = Omit<ForumPostDetail, "user" | "comments"> & { user: UserWithRole; comments: ForumCommentWithRole[]; attachments?: string | null };
 
 const itemAnimation = item;
 
@@ -42,7 +46,52 @@ function getInitials(name: string) {
   return name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
 }
 
-// ── Post Card ────────────────────────────────────────────
+function parseAttachments(raw?: string | null): Attachment[] {
+  if (!raw) return [];
+  try { return JSON.parse(raw); } catch { return []; }
+}
+
+function isImageType(type: string) {
+  return type.startsWith("image/");
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// â”€â”€ Attachment Display â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function AttachmentList({ attachments }: { attachments: Attachment[] }) {
+  if (attachments.length === 0) return null;
+  return (
+    <div className="mt-3 space-y-2">
+      {attachments.map((att, i) => (
+        <div key={i}>
+          {isImageType(att.type) ? (
+            <a href={att.url} target="_blank" rel="noopener noreferrer" className="block">
+              <img src={att.url} alt={att.name} className="max-h-48 rounded-lg border border-border object-contain" />
+            </a>
+          ) : (
+            <a
+              href={att.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 transition-colors text-sm"
+            >
+              <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="truncate flex-1">{att.name}</span>
+              <span className="text-xs text-muted-foreground shrink-0">{formatFileSize(att.size)}</span>
+              <Download className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            </a>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// â”€â”€ Post Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function PostCard({
   post, currentUserId, currentUserRole, onOpen, onDelete,
 }: {
@@ -100,6 +149,12 @@ function PostCard({
       <CardContent className="pt-0">
         <h3 className="font-semibold text-base mb-1 line-clamp-2">{post.title}</h3>
         <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{post.content}</p>
+        {parseAttachments(post.attachments).length > 0 && (
+          <div className="flex items-center gap-1.5 text-xs text-primary mb-3">
+            <Paperclip className="h-3.5 w-3.5" />
+            {t("forum.attachmentCount", { count: parseAttachments(post.attachments).length })}
+          </div>
+        )}
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <MessageCircle className="h-3.5 w-3.5" />
@@ -115,7 +170,7 @@ function PostCard({
   );
 }
 
-// ── Comment Item ─────────────────────────────────────────
+// â”€â”€ Comment Item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function CommentItem({
   comment, currentUserId, currentUserRole, postId, onDeleted,
 }: {
@@ -169,6 +224,7 @@ function CommentItem({
           <span className="text-xs text-muted-foreground ml-auto">{timeAgo(comment.createdAt)}</span>
         </div>
         <p className="text-sm text-foreground/90">{comment.content}</p>
+        <AttachmentList attachments={parseAttachments(comment.attachments)} />
       </div>
       {canDelete && (
         <button
@@ -183,7 +239,7 @@ function CommentItem({
   );
 }
 
-// ── Post List ─────────────────────────────────────────────
+// â”€â”€ Post List â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function PostList({
   posts, loading, currentUserId, currentUserRole, onOpen, onDelete, hasMore, onLoadMore,
 }: {
@@ -236,7 +292,7 @@ function PostList({
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────
+// â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function ForumPage() {
   const { t } = useI18n();
   const { user } = useAuthStore();
@@ -254,11 +310,13 @@ export default function ForumPage() {
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [createForm, setCreateForm] = useState({ title: "", content: "" });
+  const [createFiles, setCreateFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
   const [creating, setCreating] = useState(false);
   const [deletePostTarget, setDeletePostTarget] = useState<string | null>(null);
   const [deletingPost, setDeletingPost] = useState(false);
 
-  // ── Fetch posts ──────────────────────────────────────
+  // â”€â”€ Fetch posts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const fetchPosts = useCallback(
     async (reset = false) => {
       setLoadingPosts(true);
@@ -279,9 +337,9 @@ export default function ForumPage() {
     [activeTab, page]
   );
 
-  useEffect(() => { setPosts([]); fetchPosts(true); }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchPosts(true); }, [activeTab]);
 
-  // ── Open detail ──────────────────────────────────────
+  // â”€â”€ Open detail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleOpenPost = async (post: ForumPostWithRole) => {
     setLoadingDetail(true);
     setOpenPost(null);
@@ -297,7 +355,7 @@ export default function ForumPage() {
     }
   };
 
-  // ── Delete post ──────────────────────────────────────
+  // â”€â”€ Delete post â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleDeletePost = async (id: string) => {
     setDeletePostTarget(id);
   };
@@ -319,7 +377,7 @@ export default function ForumPage() {
     }
   };
 
-  // ── Send comment ─────────────────────────────────────
+  // â”€â”€ Send comment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleSendComment = async () => {
     if (!commentInput.trim() || !openPost) return;
     setSendingComment(true);
@@ -345,7 +403,7 @@ export default function ForumPage() {
     }
   };
 
-  // ── Create post ──────────────────────────────────────
+  // â”€â”€ Create post â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleCreatePost = async () => {
     if (!createForm.title.trim() || !createForm.content.trim()) {
       toast.error(t("forum.titleContentRequired"));
@@ -353,21 +411,36 @@ export default function ForumPage() {
     }
     setCreating(true);
     try {
+      // Upload files first if any
+      let attachments: Attachment[] | null = null;
+      if (createFiles.length > 0) {
+        setUploadingFiles(true);
+        const formData = new FormData();
+        createFiles.forEach((f) => formData.append("files", f));
+        const uploadRes = await fetch("/api/forum/upload", { method: "POST", body: formData });
+        const uploadData = await uploadRes.json();
+        if (!uploadData.success) throw new Error(uploadData.error);
+        attachments = uploadData.data;
+        setUploadingFiles(false);
+      }
+
       const res = await fetch("/api/forum", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...createForm, category: activeTab }),
+        body: JSON.stringify({ ...createForm, category: activeTab, attachments }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
       setPosts((prev) => [data.data, ...prev]);
       setCreateForm({ title: "", content: "" });
+      setCreateFiles([]);
       setShowCreateDialog(false);
       toast.success(t("forum.createSuccess"));
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : t("forum.createError"));
     } finally {
       setCreating(false);
+      setUploadingFiles(false);
     }
   };
 
@@ -435,7 +508,7 @@ export default function ForumPage() {
         </Tabs>
       </motion.div>
 
-      {/* ── Detail Post Dialog ── */}
+      {/* â”€â”€ Detail Post Dialog â”€â”€ */}
       <Dialog
         open={!!openPost || loadingDetail}
         onOpenChange={(open) => { if (!open) { setOpenPost(null); setCommentInput(""); } }}
@@ -484,9 +557,10 @@ export default function ForumPage() {
 
               {/* Scrollable content */}
               <div className="flex-1 overflow-y-auto px-6 py-4">
-                <p className="text-sm text-foreground/90 whitespace-pre-wrap mb-6">{openPost.content}</p>
+                <p className="text-sm text-foreground/90 whitespace-pre-wrap mb-4">{openPost.content}</p>
+                <AttachmentList attachments={parseAttachments(openPost.attachments)} />
 
-                <div className="border-t border-border pt-4">
+                <div className="border-t border-border pt-4 mt-4">
                   <h4 className="text-sm font-semibold mb-3">{t("forum.commentsHeading", { count: openPost._count.comments })}</h4>
                   {openPost.comments.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-6">{t("forum.noComments")}</p>
@@ -529,7 +603,7 @@ export default function ForumPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Create Post Dialog ── */}
+      {/* â”€â”€ Create Post Dialog â”€â”€ */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -558,12 +632,55 @@ export default function ForumPage() {
                 onChange={(e) => setCreateForm({ ...createForm, content: e.target.value })}
               />
             </div>
+            {/* File Attachments */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Paperclip className="h-4 w-4" />
+                {t("forum.attachments")}
+                <span className="text-xs text-muted-foreground font-normal">({t("forum.attachmentsOptional")})</span>
+              </Label>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border hover:border-primary/50 cursor-pointer transition-colors text-sm text-muted-foreground">
+                  <Paperclip className="h-4 w-4" />
+                  {t("forum.chooseFiles")}
+                  <input
+                    type="file"
+                    multiple
+                    className="hidden"
+                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (createFiles.length + files.length > 5) {
+                        toast.error(t("forum.maxFiles"));
+                        return;
+                      }
+                      setCreateFiles((prev) => [...prev, ...files]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                {createFiles.length > 0 && (
+                  <div className="space-y-1">
+                    {createFiles.map((f, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm bg-muted/30 rounded-lg px-3 py-1.5">
+                        {f.type.startsWith("image/") ? <ImageIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                        <span className="truncate flex-1">{f.name}</span>
+                        <span className="text-xs text-muted-foreground">{formatFileSize(f.size)}</span>
+                        <button onClick={() => setCreateFiles((prev) => prev.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>{t("action.cancel")}</Button>
-            <Button disabled={creating} onClick={handleCreatePost}>
-              {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              {t("forum.post")}
+            <Button variant="outline" onClick={() => { setShowCreateDialog(false); setCreateFiles([]); }}>{t("action.cancel")}</Button>
+            <Button disabled={creating || uploadingFiles} onClick={handleCreatePost}>
+              {creating || uploadingFiles ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {uploadingFiles ? t("forum.uploading") : t("forum.post")}
             </Button>
           </DialogFooter>
         </DialogContent>

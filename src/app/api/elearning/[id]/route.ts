@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { getUserIdFromRequest } from "@/lib/api-utils";
+import { logActivity } from "@/lib/activity";
 
 export async function PUT(
   request: NextRequest,
@@ -35,6 +36,14 @@ export async function PUT(
       include: { course: { select: { id: true, name: true, sks: true } } },
     });
 
+    await logActivity({
+      userId,
+      action: "UPDATE",
+      entity: "elearning",
+      entityId: elearning.id,
+      description: `Mengupdate e-learning: ${elearning.title}`,
+    });
+
     return successResponse(elearning, "E-Learning berhasil diupdate");
   } catch (error) {
     console.error("ELearning PUT error:", error);
@@ -59,6 +68,13 @@ export async function DELETE(
     }
 
     await prisma.eLearning.delete({ where: { id } });
+    await logActivity({
+      userId,
+      action: "DELETE",
+      entity: "elearning",
+      entityId: id,
+      description: `Menghapus e-learning: ${existing.title}`,
+    });
     return successResponse(null, "E-Learning berhasil dihapus");
   } catch (error) {
     console.error("ELearning DELETE error:", error);

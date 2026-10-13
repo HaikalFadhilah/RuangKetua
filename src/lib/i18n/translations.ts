@@ -12,6 +12,7 @@ import { extra11 } from "./extra-11";
 import { extra12 } from "./extra-12";
 import { extra13 } from "./extra-13";
 import { extra14 } from "./extra-14";
+import { extra15 } from "./extra-15";
 
 export const SUPPORTED_LOCALES = ["id", "en"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -77,6 +78,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "nav.adminPanel": "Admin Panel",
     "nav.members": "Buku Absen",
     "nav.spreadsheets": "Spreadsheet",
+    "nav.reminders": "Auto Reminder",
 
     // ── Drive ──
     "drive.title": "Google Drive",
@@ -146,6 +148,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     ...extra12.id,
     ...extra13.id,
     ...extra14.id,
+    ...extra15.id,
   },
   en: {
     // ── Common actions ──
@@ -201,6 +204,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "nav.adminPanel": "Admin Panel",
     "nav.members": "Class Members",
     "nav.spreadsheets": "Spreadsheets",
+    "nav.reminders": "Auto Reminder",
 
     // ── Drive ──
     "drive.title": "Google Drive",
@@ -270,6 +274,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     ...extra12.en,
     ...extra13.en,
     ...extra14.en,
+    ...extra15.en,
   },
 };
 

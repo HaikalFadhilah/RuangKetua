@@ -7,11 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, Lock, Palette, Bell, Bot, Save, Loader2, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { User, Lock, Palette, Bell, Save, Loader2, Eye, EyeOff, CheckCircle2, BellRing, AlertTriangle, Clock, Megaphone } from "lucide-react";
 import { useTheme } from "next-themes";
 import toast from "react-hot-toast";
+import { useAuthStore } from "@/store";
 
 interface UserSettings {
   user: {
@@ -19,7 +19,7 @@ interface UserSettings {
     name: string;
     email: string;
     className: string | null;
-    semester: number | null;
+    semester: string | null;
     avatar: string | null;
     university: string | null;
   } | null;
@@ -28,13 +28,18 @@ interface UserSettings {
     reminderDefault: string;
     aiModel: string;
     language: string;
+    notifyOverdue: boolean;
+    notifyDeadline: boolean;
+    notifyReminder: boolean;
+    notifyAnnouncement: boolean;
   } | null;
 }
 
 import { container, item } from "@/lib/animations";
 
 export default function SettingsPage() {
-  const { t } = useI18n();
+  const { t, setLocale } = useI18n();
+  const { user: authUser, setUser } = useAuthStore();
   const { theme, setTheme } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -46,6 +51,7 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState({ name: "", email: "", className: "", semester: "", university: "" });
   const [password, setPassword] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
   const [settings, setSettings] = useState({ reminderDefault: "H-3", aiModel: "llama-3.3-70b-versatile", language: "id" });
+  const [notifPrefs, setNotifPrefs] = useState({ notifyOverdue: true, notifyDeadline: true, notifyReminder: true, notifyAnnouncement: true });
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -67,6 +73,12 @@ export default function SettingsPage() {
             reminderDefault: d.settings.reminderDefault || "H-3",
             aiModel: d.settings.aiModel || "llama-3.3-70b-versatile",
             language: d.settings.language || "id",
+          });
+          setNotifPrefs({
+            notifyOverdue: d.settings.notifyOverdue ?? true,
+            notifyDeadline: d.settings.notifyDeadline ?? true,
+            notifyReminder: d.settings.notifyReminder ?? true,
+            notifyAnnouncement: d.settings.notifyAnnouncement ?? true,
           });
           if (d.settings.theme) setTheme(d.settings.theme);
         }
@@ -93,6 +105,15 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
+      if (authUser) {
+        setUser({
+          ...authUser,
+          name: profile.name,
+          className: profile.className || null,
+          semester: profile.semester || null,
+          university: profile.university || null,
+        });
+      }
       toast.success(t("settings.profileUpdated"));
     }     catch (err) { toast.error(err instanceof Error ? err.message : t("settings.saveFailed")); }
     finally { setIsSavingProfile(false); }
@@ -128,10 +149,12 @@ export default function SettingsPage() {
           reminderDefault: settings.reminderDefault,
           aiModel: settings.aiModel,
           language: settings.language,
+          ...notifPrefs,
         }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
+      setLocale(settings.language as "id" | "en");
       toast.success(t("settings.saved"));
     }     catch (err) { toast.error(err instanceof Error ? err.message : t("settings.saveFailed")); }
     finally { setIsSavingSettings(false); }
@@ -278,6 +301,36 @@ export default function SettingsPage() {
                 <option value="H-1">{t("settings.reminderH1")}</option>
                 <option value="H-0">{t("settings.reminderH0")}</option>
               </select>
+            </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Notification Preferences */}
+      <motion.div variants={item}>
+        <Card>
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><BellRing className="h-4 w-4" />{t("settings.notifPrefs")}</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">{t("settings.notifPrefsDesc")}</p>
+              {([
+                { key: "notifyOverdue" as const, icon: <AlertTriangle className="h-4 w-4 text-red-500" />, label: t("settings.notifOverdue"), desc: t("settings.notifOverdueDesc") },
+                { key: "notifyDeadline" as const, icon: <Clock className="h-4 w-4 text-orange-500" />, label: t("settings.notifDeadline"), desc: t("settings.notifDeadlineDesc") },
+                { key: "notifyReminder" as const, icon: <Bell className="h-4 w-4 text-yellow-500" />, label: t("settings.notifReminder"), desc: t("settings.notifReminderDesc") },
+                { key: "notifyAnnouncement" as const, icon: <Megaphone className="h-4 w-4 text-blue-500" />, label: t("settings.notifAnnouncement"), desc: t("settings.notifAnnouncementDesc") },
+              ]).map((item) => (
+                <label key={item.key} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors cursor-pointer">
+                  {item.icon}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">{item.desc}</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifPrefs[item.key]}
+                    onChange={(e) => setNotifPrefs({ ...notifPrefs, [item.key]: e.target.checked })}
+                    className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
+                  />
+                </label>
+              ))}
             </CardContent>
         </Card>
       </motion.div>

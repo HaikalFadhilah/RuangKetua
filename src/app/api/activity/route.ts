@@ -1,6 +1,6 @@
-import { NextRequest } from "next/server";
+﻿import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
-import { successResponse, errorResponse, paginatedResponse, getPaginationParams } from "@/lib/api-response";
+import { errorResponse, paginatedResponse, getPaginationParams } from "@/lib/api-response";
 import { getUserIdFromRequest } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get("action") || "";
     const entity = searchParams.get("entity") || "";
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const where: any = { userId };
     if (action) where.action = action;
     if (entity) where.entity = entity;

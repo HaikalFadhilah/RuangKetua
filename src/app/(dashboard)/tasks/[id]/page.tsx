@@ -16,11 +16,9 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   ArrowLeft,
   Calendar,
-  Clock,
   Edit3,
   Save,
   Trash2,
-  User,
   BookOpen,
   CheckCircle2,
   Circle,
@@ -28,7 +26,6 @@ import {
   History,
   ListTodo,
   Plus,
-  X,
 } from "lucide-react";
 import { formatDate, formatRelativeTime, getPriorityColor, getStatusColor } from "@/lib/utils";
 import { PRIORITY_OPTIONS, STATUS_OPTIONS } from "@/config/constants";
@@ -92,7 +89,11 @@ export default function TaskDetailPage() {
         setForm({
           title: data.data.title,
           description: data.data.description || "",
-          deadline: data.data.deadline ? new Date(data.data.deadline).toISOString().slice(0, 16) : "",
+          deadline: data.data.deadline ? (() => {
+            const utc = new Date(data.data.deadline);
+            const wib = new Date(utc.getTime() + 7 * 60 * 60 * 1000);
+            return wib.toISOString().slice(0, 16);
+          })() : "",
           priority: data.data.priority,
           status: data.data.status,
         });

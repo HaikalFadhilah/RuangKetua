@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { getUserIdFromRequest } from "@/lib/api-utils";
+import { logActivity } from "@/lib/activity";
 
 export async function DELETE(
   request: NextRequest,
@@ -59,6 +60,14 @@ export async function PUT(
         type: body.type ? body.type.toUpperCase() : undefined,
         color: body.color || undefined,
       },
+    });
+
+    await logActivity({
+      userId,
+      action: "UPDATE",
+      entity: "calendar",
+      entityId: event.id,
+      description: `Mengupdate event kalender: ${event.title}`,
     });
 
     return successResponse(event, "Event berhasil diupdate");

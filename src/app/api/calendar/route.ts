@@ -1,7 +1,8 @@
-import { NextRequest } from "next/server";
+﻿import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { getUserIdFromRequest } from "@/lib/api-utils";
+import { logActivity } from "@/lib/activity";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type");
     const search = searchParams.get("search");
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const where: any = { userId };
 
     if (mode !== "all") {
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     // 2. Ambil Task dari Task Manager (yang belum selesai / completed bisa di-exclude atau include tergantung filter)
     const taskWhere: any = { userId, deadline: { not: null } };
-    
+
     if (mode !== "all") {
       const month = parseInt(searchParams.get("month") || String(new Date().getMonth() + 1));
       const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()));
@@ -113,6 +114,14 @@ export async function POST(request: NextRequest) {
         color: color || null,
         allDay: allDay || false,
       },
+    });
+
+    await logActivity({
+      userId,
+      action: "CREATE",
+      entity: "calendar",
+      entityId: event.id,
+      description: `Membuat event kalender: ${event.title}`,
     });
 
     return successResponse(event, "Event berhasil dibuat", 201);

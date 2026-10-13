@@ -30,6 +30,7 @@ export default function AIAssistantPage() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const messageIdRef = useRef(0);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -39,7 +40,8 @@ export default function AIAssistantPage() {
   const sendMessage = async (content: string) => {
     if (!content.trim()) return;
 
-    const userMsg: Message = { id: Date.now().toString(), role: "user", content };
+    messageIdRef.current += 1;
+    const userMsg: Message = { id: messageIdRef.current.toString(), role: "user", content };
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
     setInput("");
@@ -54,7 +56,8 @@ export default function AIAssistantPage() {
       const data = await res.json();
 
       if (data.success) {
-        const aiMsg: Message = { id: (Date.now() + 1).toString(), role: "assistant", content: data.data.reply };
+        messageIdRef.current += 1;
+        const aiMsg: Message = { id: messageIdRef.current.toString(), role: "assistant", content: data.data.reply };
         setMessages((prev) => [...prev, aiMsg]);
       } else {
         toast.error(data.error || t("ai.noResponse"));

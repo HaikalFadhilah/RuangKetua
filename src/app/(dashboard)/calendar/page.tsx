@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/lib/i18n";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
@@ -47,8 +48,12 @@ const OCR_TYPE_COLORS: Record<string, string> = {
 
 type ListSortMode = "upcoming" | "newest";
 
+const isTaskEvent = (event: CalendarEvent) => event.id.startsWith("task_");
+const getTaskId = (event: CalendarEvent) => event.id.replace(/^task_/, "");
+
 export default function CalendarPage() {
   const { t } = useI18n();
+  const router = useRouter();
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
@@ -178,6 +183,11 @@ export default function CalendarPage() {
   };
 
   const openEdit = (ev: CalendarEvent) => {
+    if (isTaskEvent(ev)) {
+      router.push(`/tasks/${getTaskId(ev)}`);
+      return;
+    }
+
     const typeReverseMap: Record<string, string> = {
       KULIAH: "academic", DEADLINE: "deadline", ELEARNING: "elearning", OTHER: "personal",
       PRAKTIKUM: "academic", SEMINAR: "academic", PRESENTASI: "academic", UTS: "deadline",
@@ -219,12 +229,21 @@ export default function CalendarPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (id.startsWith("task_")) {
+      router.push(`/tasks/${id.replace(/^task_/, "")}`);
+      return;
+    }
+
     try {
-      await fetch(`/api/calendar/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/calendar/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
       toast.success(t("calendar.deleteSuccess"));
       fetchEvents();
       fetchAllEvents();
-    } catch { toast.error(t("calendar.deleteError")); }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("calendar.deleteError"));
+    }
   };
 
   // OCR Handlers
@@ -277,7 +296,13 @@ export default function CalendarPage() {
       const res = await fetch("/api/calendar/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ events: selectedEvents.map(({ selected: _, ...ev }) => ev) }),
+        body: JSON.stringify({
+          events: selectedEvents.map((event) => {
+            const { selected, ...rest } = event;
+            void selected;
+            return rest;
+          }),
+        }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
@@ -516,11 +541,13 @@ export default function CalendarPage() {
                               </div>
                               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                                 <button onClick={() => openEdit(ev)} className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
-                                  <Pencil className="h-3 w-3" />
+                                  {isTaskEvent(ev) ? <ChevronRight className="h-3 w-3" /> : <Pencil className="h-3 w-3" />}
                                 </button>
-                                <button onClick={() => handleDelete(ev.id)} className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors">
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
+                                {!isTaskEvent(ev) && (
+                                  <button onClick={() => handleDelete(ev.id)} className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors">
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                )}
                               </div>
                             </div>
                           );
@@ -675,14 +702,16 @@ export default function CalendarPage() {
                             onClick={() => openEdit(ev)}
                             className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                           >
-                            <Pencil className="h-3 w-3" />
+                            {isTaskEvent(ev) ? <ChevronRight className="h-3 w-3" /> : <Pencil className="h-3 w-3" />}
                           </button>
-                          <button
-                            onClick={() => handleDelete(ev.id)}
-                            className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
+                          {!isTaskEvent(ev) && (
+                            <button
+                              onClick={() => handleDelete(ev.id)}
+                              className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     );

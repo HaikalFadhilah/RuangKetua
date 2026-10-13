@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { RuangKetuaLogo } from "@/components/ui/ruang-ketua-logo";
 import {
@@ -25,13 +26,13 @@ interface SharedFileInfo {
   createdAt: string;
 }
 
-function getFileIcon(fileType: string) {
-  if (fileType.startsWith("image/")) return FileImage;
+function FileTypeIcon({ fileType, className }: { fileType: string; className?: string }) {
+  if (fileType.startsWith("image/")) return <FileImage className={className} />;
   if (fileType.includes("pdf") || fileType.includes("document") || fileType.includes("word"))
-    return FileText;
+    return <FileText className={className} />;
   if (fileType.includes("zip") || fileType.includes("rar") || fileType.includes("archive"))
-    return FileArchive;
-  return File;
+    return <FileArchive className={className} />;
+  return <File className={className} />;
 }
 
 function formatFileSize(bytes: number) {
@@ -128,19 +129,18 @@ export default function SharePage() {
           <p className="text-sm text-slate-400 mb-6">
             {error || "Link share ini sudah tidak aktif atau file telah dihapus."}
           </p>
-          <a
+          <Link
             href="/"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
           >
             <RuangKetuaLogo size={24} />
             Buka Ruang Ketua
-          </a>
+          </Link>
         </motion.div>
       </div>
     );
   }
 
-  const FileIcon = getFileIcon(file.fileType);
   const ext = getExtension(file.name);
 
   return (
@@ -167,7 +167,7 @@ export default function SharePage() {
           {/* File card */}
           <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 mb-5">
             <div className="shrink-0 p-3 rounded-xl bg-indigo-500/10">
-              <FileIcon className="h-8 w-8 text-indigo-400" />
+              <FileTypeIcon fileType={file.fileType} className="h-8 w-8 text-indigo-400" />
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-base font-semibold text-white truncate">{file.name}</h1>
@@ -224,7 +224,7 @@ export default function SharePage() {
           {/* Preview for images */}
           {file.fileType.startsWith("image/") && (
             <div className="mt-5 rounded-xl overflow-hidden border border-slate-700/50">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              { }
               <img
                 src={file.fileUrl}
                 alt={file.name}

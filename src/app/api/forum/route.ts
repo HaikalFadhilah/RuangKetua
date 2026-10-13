@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     const userRole = request.headers.get("x-user-role");
     const body = await request.json();
-    const { title, content, category } = body;
+    const { title, content, category, attachments } = body;
 
     if (!title?.trim()) return errorResponse("Judul wajib diisi", 400);
     if (!content?.trim()) return errorResponse("Konten wajib diisi", 400);
@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
         content: content.trim(),
         category,
         university: category === "INTERNAL_CAMPUS" ? (currentUser?.university ?? null) : null,
+        attachments: attachments ? JSON.stringify(attachments) : null,
       },
       include: {
         user: {
